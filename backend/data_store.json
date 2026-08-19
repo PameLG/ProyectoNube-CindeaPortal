@@ -56,6 +56,110 @@
       "email_verified_at": "2026-08-17T01:49:28.303Z",
       "created_at": "2026-08-17T01:49:28.303Z",
       "updated_at": "2026-08-17T01:49:28.303Z"
+    },
+    {
+      "id": "f906a060-5883-44f1-a626-07493d45c068",
+      "email": "504540188@est.mep.go.cr",
+      "password_hash": "$2a$10$1pAekA2nftaotHugKYT.juH4/4q//BwAipDrUeE/DWibxbTBUVjQO",
+      "full_name": "Pamela Leiva Gómez 8899-7711",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": false,
+      "email_verified_at": "2026-08-19T17:22:36.000Z",
+      "created_at": "2026-08-19T17:22:36.000Z",
+      "updated_at": "2026-08-19T17:26:55.500Z"
+    },
+    {
+      "id": "6fbac74b-94ec-4f79-98d7-e1f9a06a5435",
+      "email": "118230491@est.mep.go.cr",
+      "password_hash": "$2a$10$LWz0AW17nuJkw2S36kNwhOYa4adE58BHxjUbag9CLFC6sJPdphTuK",
+      "full_name": "Alejandro José Mora Solís 8745-1290",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.110Z",
+      "created_at": "2026-08-19T17:22:36.110Z",
+      "updated_at": "2026-08-19T17:22:36.110Z"
+    },
+    {
+      "id": "33db5b28-f19e-4cd7-a475-bc9be3402eb7",
+      "email": "207450123@est.mep.go.cr",
+      "password_hash": "$2a$10$f23dmYfrWMcJ1lqhCiRVx.npA9TqDYixgZcQdsw6uNJ7ZgFpIsTKG",
+      "full_name": "María Fernanda Rodríguez Céspedes 8321-4567",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.198Z",
+      "created_at": "2026-08-19T17:22:36.198Z",
+      "updated_at": "2026-08-19T17:22:36.198Z"
+    },
+    {
+      "id": "2f51038f-32fa-48a4-b622-2db04b8cf8a6",
+      "email": "109820341@est.mep.go.cr",
+      "password_hash": "$2a$10$UkbEUWQgIo4aEjt69CVci.ZKR0R1Q.lhxHwYZrHf8XmFFTo44QCMi",
+      "full_name": "Carlos Alberto Núñez Quesada 8901-2345",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.283Z",
+      "created_at": "2026-08-19T17:22:36.283Z",
+      "updated_at": "2026-08-19T17:22:36.283Z"
+    },
+    {
+      "id": "f5c31972-2adc-4774-a3f7-3faaaa71f2bb",
+      "email": "503210987@est.mep.go.cr",
+      "password_hash": "$2a$10$pf6DV2yAxNOhWsPfdlW/fO3ZXKtY0DemYOCd1tx7Pq63m0DxRRqPu",
+      "full_name": "Sofía Elena Vargas Peñaranda 8654-7890",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.372Z",
+      "created_at": "2026-08-19T17:22:36.372Z",
+      "updated_at": "2026-08-19T17:22:36.372Z"
+    },
+    {
+      "id": "ac4712aa-0be8-492c-9cf5-9aea42406a10",
+      "email": "304560789@est.mep.go.cr",
+      "password_hash": "$2a$10$iLDd2HLDQj0sPhKOFVomgeKs/fcsbbyCEU8slMyQ.icpInDZW05Ku",
+      "full_name": "Esteban Josué Brenes Chacón 8432-1098",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.459Z",
+      "created_at": "2026-08-19T17:22:36.459Z",
+      "updated_at": "2026-08-19T17:22:36.459Z"
+    },
+    {
+      "id": "80bc0283-c33b-4ced-9a7c-4d68df6445de",
+      "email": "112340567@est.mep.go.cr",
+      "password_hash": "$2a$10$aW3SOUb5Y.9laPeTsmtZu..Wpye.FXcqEv1aXU57HuA44YIeBg.3u",
+      "full_name": "Valeria Michelle Jiménez Zúñiga 8765-4321",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.547Z",
+      "created_at": "2026-08-19T17:22:36.547Z",
+      "updated_at": "2026-08-19T17:22:36.547Z"
+    },
+    {
+      "id": "6a2ac768-7e3d-4796-bdd2-23bb9be93175",
+      "email": "602340891@est.mep.go.cr",
+      "password_hash": "$2a$10$ccEMnvnlFh6aaguze31NZ.vnzuT5du7F0NqALud.8VP153X6rLRMK",
+      "full_name": "Andrés Felipe Muñoz Barquero 8512-3456",
+      "role": "student",
+      "avatar_url": null,
+      "is_active": true,
+      "must_change_password": true,
+      "email_verified_at": "2026-08-19T17:22:36.634Z",
+      "created_at": "2026-08-19T17:22:36.634Z",
+      "updated_at": "2026-08-19T17:22:36.634Z"
     }
   ],
   "teachers": [
@@ -157,20 +261,108 @@
       "phone": "+506 8000-0000",
       "created_at": "2026-08-19T07:48:04.281Z",
       "updated_at": "2026-08-19T07:48:04.281Z"
+    },
+    {
+      "id": "fd8baf9b-1ebf-44b3-a737-f900988be473",
+      "user_id": "f906a060-5883-44f1-a626-07493d45c068",
+      "employee_number": "MEP-52336",
+      "department": "Docencia General",
+      "phone": "+506 8000-0000",
+      "created_at": "2026-08-19T17:26:47.779Z",
+      "updated_at": "2026-08-19T17:26:47.779Z"
     }
   ],
-  "students": [],
-  "courses": [
+  "students": [
     {
-      "id": "56699a66-3292-4df3-8c5b-a92a0c61fd41",
-      "teacher_id": "451d5453-8849-4c69-9f68-dc895073a62a",
-      "name": "Ingles 10° Colorado",
-      "code": "ING-COLO",
-      "description": null,
-      "color": "#2563eb",
-      "created_at": "2026-08-19T01:48:43.274Z",
-      "updated_at": "2026-08-19T01:48:43.274Z"
+      "id": "f26a2907-f8aa-4dee-ab93-48dc34ba2cec",
+      "user_id": "6a2ac768-7e3d-4796-bdd2-23bb9be93175",
+      "student_number": "602340891",
+      "grade_level": "Inglés 7° y 8° Año (Módulos I y II)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.636Z",
+      "updated_at": "2026-08-19T17:22:36.636Z"
     },
+    {
+      "id": "ba879175-168b-48b0-b4ae-3183f4df562d",
+      "user_id": "80bc0283-c33b-4ced-9a7c-4d68df6445de",
+      "student_number": "112340567",
+      "grade_level": "Inglés 9° Año (Módulo III)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.548Z",
+      "updated_at": "2026-08-19T17:22:36.548Z"
+    },
+    {
+      "id": "10c5a658-2001-4b44-83c4-46f0ce4a3a6e",
+      "user_id": "ac4712aa-0be8-492c-9cf5-9aea42406a10",
+      "student_number": "304560789",
+      "grade_level": "Inglés 9° Año (Módulo III)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.461Z",
+      "updated_at": "2026-08-19T17:22:36.461Z"
+    },
+    {
+      "id": "f98a7c70-1390-46c6-b187-b310cb85b4c1",
+      "user_id": "f5c31972-2adc-4774-a3f7-3faaaa71f2bb",
+      "student_number": "503210987",
+      "grade_level": "Inglés 11° Año (Módulo V / Bachillerato)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.374Z",
+      "updated_at": "2026-08-19T17:22:36.374Z"
+    },
+    {
+      "id": "eb9d6836-2b6e-4bf6-b303-80fe8f1f2a21",
+      "user_id": "2f51038f-32fa-48a4-b622-2db04b8cf8a6",
+      "student_number": "109820341",
+      "grade_level": "Inglés 11° Año (Módulo V / Bachillerato)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.285Z",
+      "updated_at": "2026-08-19T17:22:36.285Z"
+    },
+    {
+      "id": "b9c85cad-5f00-4c61-9afa-b1008a5e1123",
+      "user_id": "33db5b28-f19e-4cd7-a475-bc9be3402eb7",
+      "student_number": "207450123",
+      "grade_level": "Inglés 10° Año (Módulo IV)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.199Z",
+      "updated_at": "2026-08-19T17:22:36.199Z"
+    },
+    {
+      "id": "2ad98df3-8aa7-4e77-9198-aaf4a12e5585",
+      "user_id": "6fbac74b-94ec-4f79-98d7-e1f9a06a5435",
+      "student_number": "118230491",
+      "grade_level": "Inglés 10° Año (Módulo IV)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": null,
+      "created_at": "2026-08-19T17:22:36.112Z",
+      "updated_at": "2026-08-19T17:22:36.112Z"
+    },
+    {
+      "id": "314cc8bf-2c86-4cff-ab57-3b563f3ec015",
+      "user_id": "f906a060-5883-44f1-a626-07493d45c068",
+      "student_number": "504540188",
+      "grade_level": "Inglés 9° Año (Módulo III)",
+      "birth_date": null,
+      "guardian_name": null,
+      "guardian_phone": "84941167",
+      "created_at": "2026-08-19T17:22:36.002Z",
+      "updated_at": "2026-08-19T17:23:22.519Z"
+    }
+  ],
+  "courses": [
     {
       "id": "55555555-5555-4555-a555-555555555551",
       "teacher_id": "22222222-2222-4222-a222-222222222222",
@@ -212,11 +404,149 @@
       "updated_at": "2026-08-19T01:42:14.909Z"
     }
   ],
-  "enrollments": [],
-  "assignments": [],
-  "submissions": [],
-  "grades": [],
-  "attendance": [],
+  "enrollments": [
+    {
+      "id": "bbd9a43b-039d-45c6-9e29-ef83fd7d9cc9",
+      "course_id": "55555555-5555-4555-a555-555555555551",
+      "student_id": "2ad98df3-8aa7-4e77-9198-aaf4a12e5585",
+      "enrolled_at": "2026-08-19T17:22:36.113Z"
+    },
+    {
+      "id": "a974526f-6013-484d-b779-9ff8024d07e3",
+      "course_id": "55555555-5555-4555-a555-555555555551",
+      "student_id": "b9c85cad-5f00-4c61-9afa-b1008a5e1123",
+      "enrolled_at": "2026-08-19T17:22:36.201Z"
+    },
+    {
+      "id": "5afbc1a2-c7f8-4244-9075-7b8d4e1c0755",
+      "course_id": "55555555-5555-4555-a555-555555555552",
+      "student_id": "eb9d6836-2b6e-4bf6-b303-80fe8f1f2a21",
+      "enrolled_at": "2026-08-19T17:22:36.286Z"
+    },
+    {
+      "id": "4bc6a231-6af9-4929-b6bc-eb8b2a8dede4",
+      "course_id": "55555555-5555-4555-a555-555555555552",
+      "student_id": "f98a7c70-1390-46c6-b187-b310cb85b4c1",
+      "enrolled_at": "2026-08-19T17:22:36.375Z"
+    },
+    {
+      "id": "5d41d22c-5d5c-4e74-b287-90398ff5fdf2",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "10c5a658-2001-4b44-83c4-46f0ce4a3a6e",
+      "enrolled_at": "2026-08-19T17:22:36.462Z"
+    },
+    {
+      "id": "6ec69bc8-0839-42dd-8aea-6014c2744516",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "ba879175-168b-48b0-b4ae-3183f4df562d",
+      "enrolled_at": "2026-08-19T17:22:36.550Z"
+    },
+    {
+      "id": "0d0ecd3c-a6ed-4e3f-8de3-54b5ffe45e13",
+      "course_id": "55555555-5555-4555-a555-555555555554",
+      "student_id": "f26a2907-f8aa-4dee-ab93-48dc34ba2cec",
+      "enrolled_at": "2026-08-19T17:22:36.637Z"
+    },
+    {
+      "id": "271ba91e-ef33-4a3f-892d-42c6cd19238f",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "314cc8bf-2c86-4cff-ab57-3b563f3ec015",
+      "enrolled_at": "2026-08-19T17:23:22.521Z"
+    }
+  ],
+  "assignments": [
+    {
+      "id": "2826590e-e7dd-4165-8180-99bd6efe61a0",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "title": "Task #1",
+      "description": "",
+      "category": "Tareas (10%)",
+      "due_date": "2026-08-26T23:59:00",
+      "status": "published",
+      "max_score": 100,
+      "google_calendar_event_id": "gcal_evt_zei4py4",
+      "drive_folder_url": "https://drive.google.com/drive/folders/16FPv91Epo7U4sT-_X3MaKXaq8786NCHP",
+      "attachment_name": "Guia_Trabajo_Unit1_Oral_Presentation.pdf",
+      "attachment_url": null,
+      "attachment_data": "data:application/pdf;base64,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",
+      "submission_type": "digital",
+      "created_at": "2026-08-19T17:21:52.271Z",
+      "updated_at": "2026-08-19T17:21:52.271Z"
+    }
+  ],
+  "submissions": [
+    {
+      "id": "9adef637-8d33-4231-a932-633092ebabc2",
+      "assignment_id": "2826590e-e7dd-4165-8180-99bd6efe61a0",
+      "student_id": "314cc8bf-2c86-4cff-ab57-3b563f3ec015",
+      "file_name": "2 archivos: Entrega_Tarea_1_Pamela_Leiva.docx, Entrega_Tarea_1_Pamela_Leiva.pdf",
+      "file_url": "/CloudStorage/2026/Entregas/2826590e-e7dd-4165-8180-99bd6efe61a0/2_archivos__Entrega_Tarea_1_Pamela_Leiva.docx__Entrega_Tarea_1_Pamela_Leiva.pdf",
+      "file_size": 10508,
+      "file_data": "{\"isMulti\":true,\"totalFiles\":2,\"files\":[{\"name\":\"Entrega_Tarea_1_Pamela_Leiva.docx\",\"size\":9037,\"type\":\"application/vnd.openxmlformats-officedocument.wordprocessingml.document\",\"data\":\"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,UEsDBAoAAAAAAE2EE10AAAAAAAAAAAAAAAAFAAAAd29yZC9QSwMECgAAAAAATYQTXQAAAAAAAAAAAAAAAAsAAAB3b3JkL19yZWxzL1BLAwQKAAAACABNhBNdxppPZfoAAAAhBAAAHAAAAHdvcmQvX3JlbHMvZG9jdW1lbnQueG1sLnJlbHOtk91OAyEQhV+FcO+yrVqNKe2NMemtWR+AsrM/cRkITI19ezF2KzUN8YLLOTOc+TI5rLefZmIf4MNoUfJFVXMGqG07Yi/5W/Ny88i3m/UrTIriRBhGF1h8gkHygcg9CRH0AEaFyjrA2OmsN4pi6XvhlH5XPYhlXa+ETz34pSfbtZL7XbvgrDk6+I+37bpRw7PVBwNIV1aIQMcJQnRUvgeS/Keuog8X19cvS67Hg9mDj3f8JThLOYjbkhCdtYSW0jOcpRzEXUkIwPYPw6zkEO6LZgGI4t3TNJyUHMKqJIK25ruVIMxKDuGhbBqQGrWfIE3DSZohxMVf33wBUEsDBAoAAAAIAE2EE10XlybdrwQAAIwQAAARAAAAd29yZC9kb2N1bWVudC54bWy1mN1u4jgUx1/liL2ZkVqSAKU0mnbEFqZFKm1V6Gjn0jiGeEnsyDakzBvN3a76BtsX2+OQEKZ0WqCaizYftn/nf459Tmw+fX6II5gzpbkUpxWv6laACSoDLianlfvhl8NWBbQhIiCRFOy0smC68vnsU+oHks5iJgzE1O9NhFRkFGF76jUg9Y4gTbxGBRAutJ8m9LQSGpP4jqNpyGKiqzGnSmo5NlUqY0eOx5wyJ5UqcGqu52Z3iZKUaY1KzomYE13g4k2aTJjAxrFUMTH4qCZOTNR0lhwiPSGGj3jEzQLZbrPAyNPKTAk/RxyuBNkh/lJQfilGqG3sLod08uhkFh3FItQghQ55UrqxLw0bwwIyf82JeRyVU+A13jcHHUVSvJTAbeQHy0FxtFT+OtFzt5gRi1iN2EbCzzYLJTHhojS8V2jWgusd7QaoPQckk/dNzoWSs6Sk8ffRemK6Ytmc34GVT/K6a/p9YgYhSVYZSB+2g+XrzvIaDg2JMuyhZHg7Q46cE6e1CartAUIHa94mqr4zqulYVRugLdfyMxCq2iBtuaifk15wrrkfqbZJOt6PVN8ktfYjbSwnLCTTPVC8zDES14OdCcdOLAMW1cti6DUp2zI9ilxr5cnq0NIfy+Fb6ik4zRWHr+vZT8waQAcmCHei1Ira7NixxJCQ6HCduFs5w3wtcIsYY2Q3PiMZLOw1yf7dquwyMIuIQerPSXRauWTE7p/qFce2/U2L9xQ/4UzZt85qZPbPWIG+TghFeYlimqk5q5zd3twN21fQHQzvO7329bB3Bee96063DYdwftO/vbv5E992odOF7vXwrnvRtmCT4dXSSCbOWcldmlxaHmWvR+d6qSd/+wspXW1mASeo34efjLzhAYlx6wNXjM8JXDw9xuz7yxLfJe786Ucwi8hOyo7cxlEDF13rN+jpPz2iHrmTnp6YRE8/NHjuf/9A++lfCR9yDPS+fvwNItuaTwSh/OlR7CR0SPQU/vBwCXYIjxZwJ2eGC6bh1nYRJtvovrUOX0ubxvYJ0v8GnXbv6hvc3dwPe9ddaA+LDPnQvb646g0uYdj9a/jRfyOAv5oUmOkZidDLlEwZzBIgBpq+60K7D1JAytg0IAtdhS9caXMAPYhtR4pVhDHAUxMgLCGKwUgxMh0TbQA3pxAvYExiDF8VegJMiH3HWBqElMJCsOZMYaxkDJ41dtsHI+FoeVuFtu2KgwgazDo1y04nft3eWggxhqEANNXFtcV1CDQiWuNMoRPLKFVttyhFDwBFGk45npUYcIEeCHsozCYTCDV8zg23Q5FoSwFGhJvQwjMo7rYZRmFgW3AKSwuIj2SqIWZW3YhERFBmh2Uu2hKMSzyPFNqTgkQwkSTS1d9Wyr5KSkZYLtQCLvkkjPDP6J1SIF8MB5uTe1BEPQ/1wXpcD1b+F36/7KRm1OT5MRl8x+zAc47nndiTa+rj59Brtuotey8Vx4RDZVIZRbhZfm+SSZ8obDUSj2heo+Harsp6WT6OpDEyLp8jNl5rDTERGR52j93MzFhKs/Y4mZns0S3MXc/i4SJhTv6rwIXigUViUbjlhqLgetPNc7pwzSk+o075Q8LZ/1BLAwQKAAAACABNhBNdtOclsuMCAACjEAAADwAAAHdvcmQvc3R5bGVzLnhtbOVWW0/bMBj9K1HeIZemBSoK2goVSNOGGGjPruM0Fo6d2Q6l/PrZiZ2WpqGFBiZtb/0uOT7nu9Q+PX/KiPOIuMCMjtzg0HcdRCGLMZ2N3Pu7ycGx6wgJaAwIo2jkLpBwz89O50MhFwQJJ4PD6xllHEyJis6DyJkHfddRqFQMMzhyUynzoecJmKIMiEOWI6qCCeMZkMrkMy8D/KHIDyDLciDxFBMsF17o+wMLw3dBYUmCIbpgsMgQleX3HkdEITIqUpwLizbfBW3OeJxzBpEQqhIZqfAygGkNE0QNoAxDzgRL5KESYxiVUOrzwC9/ZWQJ0H8bQGgBdPljBi9QAgoihTb5DTemp8181fQa2WXvnPlQLnLVtBxwMOMgT13HhK7jkXuHJUHlURRkOvkREOstz5gCgeIf1Ea+6+qRKkTRk9zk/z0pS+wZxiWVZ5vYH1RJ4nksXvo8k+0ZertKuEJAz3HQUGECTtClEsgI4zY3vDyKvvatIOvthU2JlW9PiWGrxPCTJYYbuhh20cVeq8Teh0kMJtHF0XFDYrRBYtSBxKhVYtSlRFwaeCy8V3q6p5R+q5T+JwzknuQHreQHnzBq7yX/U3JGZw3qxt0h72mFVc7Pe8l+w0Le1JF1zjrqLMPbuC85ttOAqYKDEvGXDVcxTjB9aHa8jmw63VymNcUJo7JKLPANx4yrJ4zNPTkxEZriGP1KEb1XWK2D4PcHvbG5mArr1I+Q6t7dXvDNSieMScokukUJ4uqF17zaE5Ph8DqlK+kCZfgKxzGiWyqhHqLyC8Gz+jRRqDYIyHEu99kNq/5OTXm7cKmj24ZNz4T1r8KOVdn3r0NuXkU5gPr/Zj4EieqkmgotRx2N9FVTG7eFfnSDQjJTHPN5420V+huuLL+Leaqlr1fVJjg6w1lWZ+dxait0Z8P2keW5pPHr24aqhH9x2Yz2jbtmZb951VZA/7NNW1e+XlIT72TPVlv3d9fM/hJnfwBQSwMECgAAAAAATYQTXQAAAAAAAAAAAAAAAAkAAABkb2NQcm9wcy9QSwMECgAAAAgATYQTXbg9PMI4AQAAgwIAABEAAABkb2NQcm9wcy9jb3JlLnhtbKWSXU/CMBSG/8rS+63rMBOXrSRquJLERIjGu6Y9QOP6kbYy+Pd2AyZE7rxs36dP3nO2erZXbbID56XRDSJZjhLQ3AipNw1aLefpFCU+MC1YazQ06AAezWjNbcWNg1dnLLggwSfRo33FbYO2IdgKY8+3oJjPIqFjuDZOsRCPboMt419sA7jI8xIrCEywwHAvTO1oRCel4KPSfrt2EAiOoQUFOnhMMoJ/2QBO+ZsPhuSCVDIcLNxEz+FI770cwa7rsm4yoLE/wR+Ll7dh1FTqflMcEK0Fr7gDFoyjK51qpkDU+OKyX2DLfFjETa8liMfDBfc363EHO9l/JUoGYjzWp6GPbhBJLFsdRzsn75On5+Uc0SIvyjSfpuRhScpqclcVZTYt7j/7aleOX6k6lfiX9SyhQ/PrH4f+AFBLAwQKAAAACABNhBNdHinpWnACAABkDAAAEgAAAHdvcmQvbnVtYmVyaW5nLnhtbM2XS27bMBCGryJw71By5AeEKEHbIIWLvoCmB6Al2ibCF0hKis/QRXfttmfrSTqULPlRILBlBPDGtDgz3/wUOUPo5u5Z8KCkxjIlUxRdhSigMlM5k8sUfX98GExRYB2ROeFK0hStqUV3tzdVIgsxpwbcApEls6VUhsw5OFRRHFTRKKh0FKMA6NImlc5StHJOJxjbbEUFsVeCZUZZtXBXmRJYLRYso7hSJsfDMArrf9qojFoLOd4RWRLb4sT/NKWpBONCGUEcPJolFsQ8FXoAdE0cmzPO3BrY4bjFqBQVRiYbxKAT5EOSRtBmaCPMMXmbkHuVFYJKV2fEhnLQoKRdMb1dRl8aGFctpHxpEaXg2y2I4vP24N6QCoYt8Bj5eRMkeKP8ZWIUHrEjHtFFHCNhP2erRBAmt4l7vZqdlxuNTgMMDwF6ed7mvDeq0FsaO482k08dyxf9CazNJu8uzZ4n5tuKaIp8yyFz6wzJ3OdCBHtPsxxaF/JtJzEUupXxk013erNw1Lw1lDylKKwpouCOfaQl5Y9rTQFUEg4K13PD8k/exr0NYe/LSw4ODAYfXSdwUIZQyyX1Kb1Pna/FRE0cNMcH0U3OC86p64iP9Lkz/f39s5v/kLWznC427vqr8QOTOdj8dIomQ68kWRG5rJv09Tj0vnjjjGvWofjodcT/OFV8FMc91A9fRf2vP6eqH0bjHuqvL+TgDKfTHurjCzk5ILaH+tGFnJz4uk/Vji/k5IzCPlU7uRT1kz5VO70Q9eP4uKrFezfiRlVQ/zbX48ENOssPFgGUL/AhALcg3bnzuiXv2LZReC+sfpY+Od75Prj9B1BLAwQKAAAAAABNhBNdAAAAAAAAAAAAAAAABgAAAF9yZWxzL1BLAwQKAAAACABNhBNdH6OSluYAAADOAgAACwAAAF9yZWxzLy5yZWxzrZLPSgMxEIdfJcy9O9tWRKRpL1LoTaQ+QEhmd4PNHyZTrW9vKIpW6tpDj5n85ss3QxarQ9ipV+LiU9QwbVpQFG1yPvYanrfryR2slosn2hmpiTL4XFRtiUXDIJLvEYsdKJjSpEyx3nSJg5F65B6zsS+mJ5y17S3yTwacMtXGaeCNm4Lavme6hJ26zlt6SHYfKMqZJ34lKtlwT6LhLbFD91luKhbwvM3scpu/J8VAYpwRgzYxTTLXbhZP5VuoujzWcjkmxoTm11wPHYSiIzeuZHIeM7q5ppHdF0nhnxUdM19KePIxlx9QSwMECgAAAAgATYQTXaCOjqWaAQAAOAgAABMAAABbQ29udGVudF9UeXBlc10ueG1stVbLTsMwEPyVKFfUuHBACLXlwOMIHOADXHuTGmKvZW8K/D3r9CEFmlKguWU9MzsT70bK5Ord1tkSQjTopvlpMc4zcAq1cdU0f366G13kV7PJ04eHmDHVxWm+IPKXQkS1ACtjgR4cIyUGK4nLUAkv1ausQJyNx+dCoSNwNKLUI59NbqCUTU3Z9eo8tZ7mxia+d1We3b7z8SpOqsVexYuHrqQ9+LXmJ8nc+o4i1fsVlSk7ilTvV8RldcL32FHxWa9Kel8bJYmJYun0lzmM1jMoAtQtJy6Mj98MGI0HOXwVpvqPybAsjQKNqrEsKXBeNpHZoO+4SccENVF7bQ+8ocFo+I/PGwbtAyqIkZfb1sUWsdK41c08ykD30nJvkehiS1m/7iA5In3UEHcHWGH/st8sgsIAIzb2EMjs8OOAj4xGkYjHfGHVREJ7mHVLPaY5pG3SoA+y59aDTto1dg6Bn3cPewsPGqJEJIfUt3FbeNAQPJM9GTbosJ8dEPFT34e3RgeNoNAmoCfCBh14G7iRnNfQtw1reBNCtL8Cs09QSwMECgAAAAgATYQTXVh52yKSAAAA5AAAABMAAABkb2NQcm9wcy9jdXN0b20ueG1snc5BCsIwEIXhq5TZ21QXIqVpN+LaRXUf0mkbaGZCJi329kYED+Dy8cPHa7qXX4oNozgmDceyggLJ8uBo0vDob4cLFJIMDWZhQg07CnRtc48cMCaHUmSARMOcUqiVEjujN1LmTLmMHL1JecZJ8Tg6i1e2q0dK6lRVZ2VXSewP4cfB16u39C85sP28k2e/h+yp9g1QSwMECgAAAAgATYQTXeL8ndqTAAAA5gAAABAAAABkb2NQcm9wcy9hcHAueG1snc5BCsIwEIXhq4TsbaoLkdK0G3HtoroPybQNNDMhE0t7eyOCB3D5+OHjtf0WFrFCYk+o5bGqpQC05DxOWj6G2+EiBWeDziyEoOUOLPuuvSeKkLIHFgVA1nLOOTZKsZ0hGK5KxlJGSsHkMtOkaBy9hSvZVwDM6lTXZwVbBnTgDvEHyq/YrPlf1JH9/OPnsMfiqe4NUEsDBAoAAAAIAE2EE12cicmRzgEAAK0GAAASAAAAd29yZC9mb290bm90ZXMueG1s1ZTNTuMwEMdfJfK9dVIBWkVNOYBA3BDdfQDjOI2F7bFsJ6Fvv5PETbosqgo9cYm/Zn7zn5nY69t3rZJWOC/BFCRbpiQRhkMpza4gf34/LH6RxAdmSqbAiILshSe3m3WXVwDBQBA+QYLxeWd5QeoQbE6p57XQzC+15A48VGHJQVOoKskF7cCVdJVm6TCzDrjwHsPdMdMyTyJO/08DKwweVuA0C7h0O6qZe2vsAumWBfkqlQx7ZKc3BwwUpHEmj4jFJKh3yUdBcTh4uHPiji73wBstTBgiUicUagDja2nnNL5Lw8P6AGlPJdFqRaYWZFeX9eDesQ6HGXiO/HJ00mpUfpqYpWd0pEdMHudI+DfmQYlm0syBv1Wao+Jm118DrD4C7O6y5jw6aOxMk5fRnszbxOov9hdYscnHqfnLxGxrZvEGap4/7Qw49qpQEbYswaon/W9Njp+cpMvD3qKFF5Y5FsAR3JJlQRbZYGiHz7PrB28ZxwhowKog8HanvbGSfc6rq2nx0vQhWROA0M2aTu7jJ863Ya/66C1TBXmIal5EJRy+mSI6RuNqPo77E26SPR3QQTOdvT5Nl4MJ0jTDK7P9mHr6EzL/NINTVTha+M1fUEsDBAoAAAAIAE2EE13Sd/y3bQAAAHsAAAAdAAAAd29yZC9fcmVscy9mb290bm90ZXMueG1sLnJlbHNNjEEOAiEMRa9CuneKLowxw8xuDmD0AA1WIA6FUGI8vixd/rz3/rx+824+3DQVcXCcLBgWX55JgoPHfTtcYF3mG+/Uh6ExVTUjEXUQe69XRPWRM+lUKssgr9Iy9TFbwEr+TYHxZO0Z2/8H4PIDUEsDBAoAAAAIAE2EE10/So6NwQEAAJIGAAARAAAAd29yZC9lbmRub3Rlcy54bWzNlNtu4yAQhl/F4j7BjrrVyorTix5Wvaua3QegGMeowCDA9ubtd3wIzrZVlDY3vTGnmW/+mTGsb/5qlbTCeQmmINkyJYkwHEppdgX58/th8ZPcbNZdLkxpIAifoL3xeWd5QeoQbE6p57XQzC+15A48VGHJQVOoKskF7cCVdJVm6TCzDrjwHuG3zLTMkwmn39PACoOHFTjNAi7djmrmXhu7QLplQb5IJcMe2en1AQMFaZzJJ8QiCupd8lHQNBw83DlxR5c74I0WJgwRqRMKNYDxtbRzGl+l4WF9gLSnkmi1IrEF2dVlPbhzrMNhBp4jvxydtBqVnyZm6Rkd6RHR4xwJ/8c8KNFMmjnwl0pzVNzsx+cAq7cAu7usOb8cNHamyctoj+Y1soz4FGtq8nFq/jIx25pZvIGa5487A469KFSELUuw6kn/W5OjFyfp8rC3aOCFZY4FcAS3ZFmQRTbY2eHz5PrBW8YxABqwKgi83GlvrGSf8uoqLp6bPiJrAhC6WdPoPn6m+TbsVR+9Zaog96OYZ1EJh++jmPwmWxFPp+0Ii6LjAR0U0+j0UaocTJCmGR6Y7du00++f9Yf6T1RgnvvNP1BLAwQKAAAACABNhBNd0nf8t20AAAB7AAAAHAAAAHdvcmQvX3JlbHMvZW5kbm90ZXMueG1sLnJlbHNNjEEOAiEMRa9CuneKLowxw8xuDmD0AA1WIA6FUGI8vixd/rz3/rx+824+3DQVcXCcLBgWX55JgoPHfTtcYF3mG+/Uh6ExVTUjEXUQe69XRPWRM+lUKssgr9Iy9TFbwEr+TYHxZO0Z2/8H4PIDUEsDBAoAAAAIAE2EE11Nn8rKoQEAAHMFAAARAAAAd29yZC9zZXR0aW5ncy54bWyllN1u2zAMhV/F0H0iu1iLwahbdCvW9WLYRbcHYCXZFiJRgiTby9uPjuO4P0CRNFeSQfE7R6TF69t/1mS9ClE7rFixzlmmUDipsanY3z8/Vl9ZFhOgBONQVWyrIru9uR7KqFKiQzEjAMZy8KJibUq+5DyKVlmIa6tFcNHVaS2c5a6utVB8cEHyi7zIdzsfnFAxEug7YA+R7XH2Pc15hRSsXbCQ6DM03ELYdH5FdA9JP2uj05bY+dWMcRXrApZ7xOpgaEwpJ0P7Zc4Ix+hOKfdOdFZh2inyoAx5cBhb7ZdrfJZGwXaG9B9doreGHVpQfDmvB/cBBloW4DH25ZRkzeT8Y2KRH9GREXHIOMbCa83ZiQWNi/CnSvOiuMXlaYCLtwDfnNech+A6v9D0ebRH3BxY47s+gbVv8surxfPMPLXg6QVaUT426AI8G3JELcuo6tn4W7Nx4kgdvYHtNxCbhmqBcpfGx5DqFd6h/C3lTwWSplk2lD2YitVgomK7M9OUWHZP0wCbTxaXjLYIlqRfDZRfTqox1IUTSj5K8kWTL/Py5j9QSwMECgAAAAgATYQTXYuGOcTFAQAAxggAABEAAAB3b3JkL2NvbW1lbnRzLnhtbKXU3XLiIBgG4FtxOFeSWFM307Qnne30eNsLoIDCNPwMoNG7X1IlSZedToJH6iTfk5fXwMPTSTSLIzWWK1mDfJWBBZVYES73NXh/+73cgoV1SBLUKElrcKYWPD0+tBVWQlDp7MID0lb4VAPmnK4gtJhRgexKcGyUVTu38vdCtdtxTCExqPU2LLL8DmKGjKMn0Bv5bGQDf8FtDBUJUJ7BIo+p9WyqhF2qCLpLgnyqSNqkSf9ZXJkmFbF0nyatY2mbJkWvk8ARpDSV/uJOGYGc/2n2UCDzedBLD2vk+AdvuDt7MysDg7j8TEjkp3pBrMls4R4KRWizJkFRNTgYWV3nl/18F726zF8/woSZsv7LyLPCh247f60cGtr4LpS0jGvb15mq+YssIMefFnEUTbiv1fnE7dIqQ7q+sq9v2ihMrfUdPl+qHMAp8a/9i+aS/Gcxzyb8Ix3RT0yJ8P2ZIYnwb+Hw4KRqRuXmEw+QABQRUGI68cAPxvZqQDzs0M7hE7dGcMre4WTkpIUZAZY4wmYpRegVdrPIIYYsG4t0XqhNz53FqCO9v20jvBh10IPGb9Neh2OtlfMWmJX/tq7tbWH+MKQpgI9/AVBLAwQKAAAACABNhBNd0nf8t20AAAB7AAAAHAAAAHdvcmQvX3JlbHMvY29tbWVudHMueG1sLnJlbHNNjEEOAiEMRa9CuneKLowxw8xuDmD0AA1WIA6FUGI8vixd/rz3/rx+824+3DQVcXCcLBgWX55JgoPHfTtcYF3mG+/Uh6ExVTUjEXUQe69XRPWRM+lUKssgr9Iy9TFbwEr+TYHxZO0Z2/8H4PIDUEsDBAoAAAAIAE2EE11j7V7WHQEAAEMDAAASAAAAd29yZC9mb250VGFibGUueG1sndHdbsIgFAfwVyHcK7WZjWms3ixLdr89AAK1RA6n4eDUtx+ttmvijd0VEPL/5Xxs91dw7McEsugrvlpmnBmvUFt/rPj318diwxlF6bV06E3Fb4b4fre9lDX6SCylPZWgKt7E2JZCkGoMSFpia3z6rDGAjOkZjgJkOJ3bhUJoZbQH62y8iTzLCv5gwisK1rVV5h3VGYyPfV4E45KInhrb0qBdXtEuGHQbUBmi1DG4uwfS+pFZvT1BYFVAwjouUzOPinoqxVdZfwP3B6znAfkTUChznWdsHoZIyalj9TynGB2rJ87/ipkApKNuZin5MFfRZWWUjaRmKpp5Ra1H7gbdjECVn0ePQR5cktLWWVoc62F2n1x3sPsy2NACF7tfUEsDBAoAAAAIAE2EE13Sd/y3bQAAAHsAAAAdAAAAd29yZC9fcmVscy9mb250VGFibGUueG1sLnJlbHNNjEEOAiEMRa9CuneKLowxw8xuDmD0AA1WIA6FUGI8vixd/rz3/rx+824+3DQVcXCcLBgWX55JgoPHfTtcYF3mG+/Uh6ExVTUjEXUQe69XRPWRM+lUKssgr9Iy9TFbwEr+TYHxZO0Z2/8H4PIDUEsBAhQACgAAAAAATYQTXQAAAAAAAAAAAAAAAAUAAAAAAAAAAAAQAAAAAAAAAHdvcmQvUEsBAhQACgAAAAAATYQTXQAAAAAAAAAAAAAAAAsAAAAAAAAAAAAQAAAAIwAAAHdvcmQvX3JlbHMvUEsBAhQACgAAAAgATYQTXcaaT2X6AAAAIQQAABwAAAAAAAAAAAAAAAAATAAAAHdvcmQvX3JlbHMvZG9jdW1lbnQueG1sLnJlbHNQSwECFAAKAAAACABNhBNdF5cm3a8EAACMEAAAEQAAAAAAAAAAAAAAAACAAQAAd29yZC9kb2N1bWVudC54bWxQSwECFAAKAAAACABNhBNdtOclsuMCAACjEAAADwAAAAAAAAAAAAAAAABeBgAAd29yZC9zdHlsZXMueG1sUEsBAhQACgAAAAAATYQTXQAAAAAAAAAAAAAAAAkAAAAAAAAAAAAQAAAAbgkAAGRvY1Byb3BzL1BLAQIUAAoAAAAIAE2EE124PTzCOAEAAIMCAAARAAAAAAAAAAAAAAAAAJUJAABkb2NQcm9wcy9jb3JlLnhtbFBLAQIUAAoAAAAIAE2EE10eKelacAIAAGQMAAASAAAAAAAAAAAAAAAAAPwKAAB3b3JkL251bWJlcmluZy54bWxQSwECFAAKAAAAAABNhBNdAAAAAAAAAAAAAAAABgAAAAAAAAAAABAAAACcDQAAX3JlbHMvUEsBAhQACgAAAAgATYQTXR+jkpbmAAAAzgIAAAsAAAAAAAAAAAAAAAAAwA0AAF9yZWxzLy5yZWxzUEsBAhQACgAAAAgATYQTXaCOjqWaAQAAOAgAABMAAAAAAAAAAAAAAAAAzw4AAFtDb250ZW50X1R5cGVzXS54bWxQSwECFAAKAAAACABNhBNdWHnbIpIAAADkAAAAEwAAAAAAAAAAAAAAAACaEAAAZG9jUHJvcHMvY3VzdG9tLnhtbFBLAQIUAAoAAAAIAE2EE13i/J3akwAAAOYAAAAQAAAAAAAAAAAAAAAAAF0RAABkb2NQcm9wcy9hcHAueG1sUEsBAhQACgAAAAgATYQTXZyJyZHOAQAArQYAABIAAAAAAAAAAAAAAAAAHhIAAHdvcmQvZm9vdG5vdGVzLnhtbFBLAQIUAAoAAAAIAE2EE13Sd/y3bQAAAHsAAAAdAAAAAAAAAAAAAAAAABwUAAB3b3JkL19yZWxzL2Zvb3Rub3Rlcy54bWwucmVsc1BLAQIUAAoAAAAIAE2EE10/So6NwQEAAJIGAAARAAAAAAAAAAAAAAAAAMQUAAB3b3JkL2VuZG5vdGVzLnhtbFBLAQIUAAoAAAAIAE2EE13Sd/y3bQAAAHsAAAAcAAAAAAAAAAAAAAAAALQWAAB3b3JkL19yZWxzL2VuZG5vdGVzLnhtbC5yZWxzUEsBAhQACgAAAAgATYQTXU2fysqhAQAAcwUAABEAAAAAAAAAAAAAAAAAWxcAAHdvcmQvc2V0dGluZ3MueG1sUEsBAhQACgAAAAgATYQTXYuGOcTFAQAAxggAABEAAAAAAAAAAAAAAAAAKxkAAHdvcmQvY29tbWVudHMueG1sUEsBAhQACgAAAAgATYQTXdJ3/LdtAAAAewAAABwAAAAAAAAAAAAAAAAAHxsAAHdvcmQvX3JlbHMvY29tbWVudHMueG1sLnJlbHNQSwECFAAKAAAACABNhBNdY+1e1h0BAABDAwAAEgAAAAAAAAAAAAAAAADGGwAAd29yZC9mb250VGFibGUueG1sUEsBAhQACgAAAAgATYQTXdJ3/LdtAAAAewAAAB0AAAAAAAAAAAAAAAAAEx0AAHdvcmQvX3JlbHMvZm9udFRhYmxlLnhtbC5yZWxzUEsFBgAAAAAWABYAfAUAALsdAAAAAA==\"},{\"name\":\"Entrega_Tarea_1_Pamela_Leiva.pdf\",\"size\":1471,\"type\":\"application/pdf\",\"data\":\"data:application/pdf;base64,JVBERi0xLjcKJYGBgYEKCjUgMCBvYmoKPDwKL0ZpbHRlciAvRmxhdGVEZWNvZGUKL0xlbmd0aCA2OTAKPj4Kc3RyZWFtCnicjVTJitwwEL37K3wOzEQq1SJBCHS7bXLIJdC3kEOYJQszhAkh+f28KnlmepaGxtiyVCVVvVevdDds90M6z2M6Z7w0/v42vP1wdfP36s+Pi69n2183l2eWWuWarLYxl3F/PRCP+48D9uDJY85ptJTG/e3wjgsvvJMkhJE48yzMQgkz5QZrw9qEeV8Vt8NX2DhToh0lga8QdnU/3zG7N+f34/7nsH8zzPvh03C3Jq14iyedxn/D5y9I6PIhMUmjVhkvbh9W/Pty6oN/abwZJD2OCeP34TqiOUvh/wo/zZi0kmgdQcULfjwNXekRK8Ymyto062ysUjYOGrOdik4KGnjCXzONf9PFLQYvf2zqIxf4+EnY4ScUKakwvowxl1rqM7qOAKCUUk3Sqh7NnannvkMmPeLiEbnprIYZMJHH9KyASRfkVw+93VeU2lMEwpqNgCLyj1nRLSylOG7MwdFk2CWki4k5Z7NHOw3ZWhroSXGGQaavw1uV6yqUAuVKjMy5qzRUGCuwcOh31TRVH8W/S9eyA4VajSffQa1sTksV4EhK0eNFkLoKyKG4iEAbqA16zPC/VQkLiAWRjIJo2UAKURRGX6Ecc/gKnq063Q2Fm3shYWGExxkQ24KyzEG2kaNHDNgyBOl26kXDGeolMz4NY2VJuabslTiCUUtg9MaA6JIlj2Spy8Qzc7TIL3vbYM1baLrHENg8c0jIhRd2R/CILKuuOyHS4GOK1YgGG3mrHTIH7exORKdoIcvVjl4BEHigQwZQS4E2SrmPsXIMXJ7fmk+gZVmbDLXCFZO0eMOD9dLbrtf68JYMNp7vqn61gM8S/DkXDec7v4tX9TSMUolV0Z7HMVLrFeyV2oBPcuUhkn8prj4oK1p5zX9FW+Ka23U7Zjl8umZxLfhV0Gv9JNf/qppy9QplbmRzdHJlYW0KZW5kb2JqCgo2IDAgb2JqCjw8Ci9GaWx0ZXIgL0ZsYXRlRGVjb2RlCi9UeXBlIC9PYmpTdG0KL04gNAovRmlyc3QgMjAKL0xlbmd0aCAzODYKPj4Kc3RyZWFtCnic1VNNS8NAEL3nV8xRDyWT/Y6UQj8SBSmW6kEUDzFZSqVkJd1K/ffOJq2isXiWMOzOvvcyszM7CSAwEAI4aAMCJGcwHEbx3furhXhRrOw2iq/X1RYeCUVYwlMUT92u9pBEo1H0xZ0Wvti4VdSJIAnkI2PRuGpX2gaGeZbniBoRlSBTiGxG65QsJWPkE8YM7cm0OBidaY7Ix4TlnSndaQLecuVBn9FKXBU4s44rTOd/xg2xsu4f7K980lEUz101K7yFs9kFQ6bQJGmiuGDq4ZzK0djCu/97uTb/tatP3vBbn0N7Q5MbG95A2+V4abdu15TU9sDLHSFhc2U3b9avy2IwcZtqoDE1lKw2KchO94OQaopnmFSmTwiVMyhTo0CdEEsUKmWo+2ItNZOcq9/ERkhMDCak62OKAurE0Gj0MGmYUIpxfsSoSvH9zfOLLdvbBzfb+8tbH8raHYSzua3WxcTtaaCQPmoKUOZhrMZ17XwYtHbEak8FDp48jB2JPwD0m+EjCmVuZHN0cmVhbQplbmRvYmoKCjcgMCBvYmoKPDwKL1NpemUgOAovUm9vdCAyIDAgUgovSW5mbyAzIDAgUgovRmlsdGVyIC9GbGF0ZURlY29kZQovVHlwZSAvWFJlZgovTGVuZ3RoIDQwCi9XIFsgMSAyIDIgXQovSW5kZXggWyAwIDggXQo+PgpzdHJlYW0KeJxjYGD4/5+JgY2BAUQwgggmEMHMyCDAwMDIzA0kWD4zMAAAUN0DPQplbmRzdHJlYW0KZW5kb2JqCgpzdGFydHhyZWYKMTI2NwolJUVPRg==\"}]}",
+      "submitted_at": "2026-08-19T17:27:35.063Z",
+      "status": "graded",
+      "grade": 75,
+      "feedback": "Good Job!"
+    }
+  ],
+  "grades": [
+    {
+      "id": "8fd87503-e96d-4574-9182-3fb145a27904",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "314cc8bf-2c86-4cff-ab57-3b563f3ec015",
+      "assignment_id": "2826590e-e7dd-4165-8180-99bd6efe61a0",
+      "title": "Task #1",
+      "category": "Tareas (10%)",
+      "score": 75,
+      "max_score": 100,
+      "weight": 10,
+      "graded_on": "2026-08-19T17:28:50.446Z",
+      "notes": "Good Job!",
+      "attachment_name": null,
+      "attachment_data": null,
+      "attachment_url": null,
+      "created_at": "2026-08-19T17:28:50.439Z",
+      "updated_at": "2026-08-19T17:28:50.453Z"
+    }
+  ],
+  "attendance": [
+    {
+      "id": "6d856cff-0e89-408c-87c2-849468f8cf75",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "314cc8bf-2c86-4cff-ab57-3b563f3ec015",
+      "date": "2026-08-19",
+      "status": "present",
+      "lessons_count": 2,
+      "points_deducted": 0,
+      "notes": null,
+      "created_at": "2026-08-19T17:24:07.418Z",
+      "updated_at": "2026-08-19T17:24:12.929Z"
+    },
+    {
+      "id": "708ca621-9766-4c02-9ae2-f14fd061c1ab",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "10c5a658-2001-4b44-83c4-46f0ce4a3a6e",
+      "date": "2026-08-19",
+      "status": "present",
+      "lessons_count": 2,
+      "points_deducted": 0,
+      "notes": null,
+      "created_at": "2026-08-19T17:24:25.015Z",
+      "updated_at": "2026-08-19T17:24:25.015Z"
+    },
+    {
+      "id": "b61a0a31-abf3-4517-b6c9-026003cff5f9",
+      "course_id": "55555555-5555-4555-a555-555555555553",
+      "student_id": "ba879175-168b-48b0-b4ae-3183f4df562d",
+      "date": "2026-08-19",
+      "status": "present",
+      "lessons_count": 2,
+      "points_deducted": 0,
+      "notes": null,
+      "created_at": "2026-08-19T17:24:25.893Z",
+      "updated_at": "2026-08-19T17:24:25.893Z"
+    }
+  ],
   "announcements": [],
   "files": [],
   "refresh_tokens": [
@@ -1624,9 +1954,25 @@
       "id": "693ca165-d215-436b-b0a9-03a32dca7d45",
       "user_id": "88888888-8888-4888-a888-888888888888",
       "token_hash": "badf9b1330811d0eb091325240b4a065a7285e080b89fd1086490601bc67467c",
-      "revoked": false,
+      "revoked": true,
       "expires_at": "2026-08-26T17:02:26.724Z",
       "created_at": "2026-08-19T17:02:26.725Z"
+    },
+    {
+      "id": "a314a770-be66-4818-94bf-79496eccd370",
+      "user_id": "88888888-8888-4888-a888-888888888888",
+      "token_hash": "ee1e63ef120be2fb289a94566d4c86830aee9361eeeeb8ed9fe7941369a50f6c",
+      "revoked": false,
+      "expires_at": "2026-08-26T17:17:26.575Z",
+      "created_at": "2026-08-19T17:17:26.576Z"
+    },
+    {
+      "id": "94b0c352-18ec-46b4-9a87-2bdf98e27ce1",
+      "user_id": "f906a060-5883-44f1-a626-07493d45c068",
+      "token_hash": "a2b5ebc324062ce8ed5f189085cec61f7a2da6b999daf962a7e32ae73a40437c",
+      "revoked": false,
+      "expires_at": "2026-08-26T17:26:47.669Z",
+      "created_at": "2026-08-19T17:26:47.669Z"
     }
   ],
   "justifications": [],
