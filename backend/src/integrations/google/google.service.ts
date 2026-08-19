@@ -31,6 +31,10 @@ function getStoredTokens(): Record<string, any> {
     if (fs.existsSync(TOKENS_PATH)) {
       return JSON.parse(fs.readFileSync(TOKENS_PATH, 'utf-8'));
     }
+    // Fallback: leer desde variable de entorno (Railway / producción en la nube)
+    if (process.env.GOOGLE_TOKENS_B64) {
+      return JSON.parse(Buffer.from(process.env.GOOGLE_TOKENS_B64, 'base64').toString('utf-8'));
+    }
   } catch (_) {}
   return {};
 }
