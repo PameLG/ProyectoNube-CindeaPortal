@@ -5,14 +5,6 @@ import { loginWithGoogle } from '../../services/auth.service';
 export const googleRouter = Router();
 
 function getFrontendBase(req: any): string {
-  if (process.env.FRONTEND_URL) return process.env.FRONTEND_URL;
-  const referer = req.headers.referer;
-  if (referer) {
-    try {
-      const u = new URL(referer);
-      return `${u.protocol}//${u.host}`;
-    } catch (_) {}
-  }
   const host = req.headers.host || 'localhost:3000';
   const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
   return `${proto}://${host}`;

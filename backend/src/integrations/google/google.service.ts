@@ -187,12 +187,55 @@ export async function createRealDriveFolder(userEmail: string, courseName: strin
   }
 }
 
+export async function deleteFilesFromDrive(
+  courseName: string,
+  taskTitle: string,
+  fileNames: string[]
+) {
+  const allTokens = getStoredTokens();
+  const tokens = allTokens['pruebaproyecto551@gmail.com'] || Object.values(allTokens)[0];
+  if (!tokens || !env.google.clientId || !fileNames || fileNames.length === 0) return;
+
+  try {
+    const auth = new google.auth.OAuth2(
+      env.google.clientId,
+      env.google.clientSecret,
+      env.google.redirectUri
+    );
+    auth.setCredentials(tokens);
+    const drive = google.drive({ version: 'v3', auth });
+
+    const folderInfo = await createRealDriveFolder('pruebaproyecto551@gmail.com', courseName, taskTitle);
+    const parentFolderId = folderInfo?.folderId;
+    if (!parentFolderId) return;
+
+    for (const name of fileNames) {
+      if (!name) continue;
+      const cleanName = name.replace(/[\/\\:*?"<>|]/g, '_').trim();
+      const q = `name = '${cleanName}' and '${parentFolderId}' in parents and trashed = false`;
+      const searchRes = await drive.files.list({ q, fields: 'files(id, name)' });
+      if (searchRes.data.files && searchRes.data.files.length > 0) {
+        for (const file of searchRes.data.files) {
+          if (file.id) {
+            console.log(`[Google Drive] 🗑️ Eliminando archivo anterior en Drive: "${file.name}" (ID: ${file.id})...`);
+            await drive.files.delete({ fileId: file.id }).catch((err) => {
+              console.warn('[Google Drive] No se pudo eliminar archivo:', err.message);
+            });
+          }
+        }
+      }
+    }
+  } catch (err: any) {
+    console.warn('[Google Drive] Error al eliminar archivos de Drive:', err.message);
+  }
+}
+
 export async function uploadFileToDrive(
   courseName: string,
   taskTitle: string,
   fileName: string,
   fileBuffer?: Buffer | string,
-  oldFileName?: string
+  oldFileName?: string | string[]
 ) {
   const allTokens = getStoredTokens();
   const tokens = allTokens['pruebaproyecto551@gmail.com'] || Object.values(allTokens)[0];
@@ -216,16 +259,19 @@ export async function uploadFileToDrive(
     }
 
     const cleanFileName = fileName.replace(/[\/\\:*?"<>|]/g, '_').trim();
-    const cleanOldFileName = oldFileName ? oldFileName.replace(/[\/\\:*?"<>|]/g, '_').trim() : undefined;
 
     // 2. Si es un reemplazo de archivo o ya existe un archivo con el mismo nombre en la carpeta de Drive, eliminarlo
     try {
-      const searchQueries: string[] = [`name = '${cleanFileName}' and '${parentFolderId}' in parents and trashed = false`];
-      if (cleanOldFileName && cleanOldFileName !== cleanFileName) {
-        searchQueries.push(`name = '${cleanOldFileName}' and '${parentFolderId}' in parents and trashed = false`);
+      const namesToDelete: string[] = [cleanFileName];
+      if (oldFileName) {
+        const oldList = Array.isArray(oldFileName) ? oldFileName : [oldFileName];
+        for (const old of oldList) {
+          if (old) namesToDelete.push(old.replace(/[\/\\:*?"<>|]/g, '_').trim());
+        }
       }
 
-      for (const q of searchQueries) {
+      for (const targetName of Array.from(new Set(namesToDelete))) {
+        const q = `name = '${targetName}' and '${parentFolderId}' in parents and trashed = false`;
         const existingFiles = await drive.files.list({ q, fields: 'files(id, name)' });
         if (existingFiles.data.files && existingFiles.data.files.length > 0) {
           for (const oldFile of existingFiles.data.files) {

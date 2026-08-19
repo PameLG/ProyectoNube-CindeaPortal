@@ -1,12 +1,9 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardLayout } from './layouts/DashboardLayout';
-import { Home } from './pages/Home';
 import { Login } from './pages/Login';
-import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Students } from './pages/Students';
 import { Courses } from './pages/Courses';
@@ -22,6 +19,42 @@ import { StudentPortal } from './pages/StudentPortal';
 import { LoginEstudiante } from './pages/LoginEstudiante';
 import { Loading } from './components/Loading';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
+
+const ROUTE_TITLES: Record<string, string> = {
+  '/': 'Acceso Docente · CINDEA MEP Cloud',
+  '/login': 'Acceso Docente · CINDEA MEP Cloud',
+  '/estudiante': 'Portal Estudiantil · CINDEA MEP Cloud',
+  '/student-portal': 'Inicio · Portal Estudiantil',
+  '/dashboard': 'Inicio · CINDEA MEP Cloud',
+  '/courses': 'Grupos · CINDEA MEP Cloud',
+  '/attendance': 'Asistencia · CINDEA MEP Cloud',
+  '/assignments': 'Tareas · CINDEA MEP Cloud',
+  '/grades': 'Calificaciones · CINDEA MEP Cloud',
+  '/students': 'Estudiantes · CINDEA MEP Cloud',
+  '/planning': 'Planeamiento · CINDEA MEP Cloud',
+  '/calendar': 'Calendario · CINDEA MEP Cloud',
+  '/announcements': 'Comunicados · CINDEA MEP Cloud',
+  '/ai-assistant': 'Asistente IA · CINDEA MEP Cloud',
+};
+
+function PageTitleUpdater() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname;
+    let title = ROUTE_TITLES[path];
+    if (!title) {
+      if (path.startsWith('/courses/')) {
+        title = 'Grupos · CINDEA MEP Cloud';
+      } else {
+        title = 'CINDEA MEP Cloud';
+      }
+    }
+    document.title = title;
+  }, [location.pathname]);
+
+  return null;
+}
 
 function OAuthCallback() {
   const { user, status } = useAuth();
@@ -50,22 +83,34 @@ function OAuthCallback() {
   return <Loading label="Iniciando sesión con Google..." />;
 }
 
+function RootRedirect() {
+  const { user, status } = useAuth();
+  if (status === 'loading') {
+    return <Loading label="Cargando portal..." />;
+  }
+  if (status === 'authenticated') {
+    if (user?.role === 'student') {
+      return <Navigate to="/student-portal" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+  return <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <PageTitleUpdater />
       <AuthProvider>
         <ForcePasswordChangeModal />
         <Routes>
-          {/* Página de inicio — con header/footer público */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/register" element={<Register />} />
-          </Route>
+          {/* Ruta raíz: Redirige automáticamente al portal correspondiente sin mostrar página intermedia */}
+          <Route path="/" element={<RootRedirect />} />
 
-          {/* Login Docente — sin header con botones */}
+          {/* Login Docente — Portada integrada + Formulario exclusivo */}
           <Route path="/login" element={<Login />} />
 
-          {/* Login Estudiante — sin header con botones */}
+          {/* Login Estudiante — Portada integrada + Formulario por Cédula exclusivo */}
           <Route path="/estudiante" element={<LoginEstudiante />} />
 
           {/* Portal del Estudiante (Protegido con Cédula/PIN) */}

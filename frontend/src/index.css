@@ -104,3 +104,96 @@
     text-align: center !important;
   }
 }
+
+/* ========================================================= */
+/* MODO NOCTURNO / DESCANSO VISUAL (SOFT DARK) CINDEA         */
+/* ========================================================= */
+html.dark-theme,
+html.dark-theme body {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark-theme .bg-white {
+  background-color: #151e2e !important;
+  color: #f8fafc !important;
+}
+
+html.dark-theme .bg-slate-50,
+html.dark-theme .bg-slate-100 {
+  background-color: #0f172a !important;
+}
+
+html.dark-theme .border-slate-200,
+html.dark-theme .border-slate-100,
+html.dark-theme .border-slate-200\/80,
+html.dark-theme .border-slate-200\/90 {
+  border-color: #27354a !important;
+}
+
+html.dark-theme .text-slate-900,
+html.dark-theme .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+html.dark-theme .text-slate-700,
+html.dark-theme .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark-theme .text-slate-500,
+html.dark-theme .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html.dark-theme .bg-blue-50,
+html.dark-theme .bg-blue-50\/80,
+html.dark-theme .bg-blue-50\/70 {
+  background-color: #1e3a8a33 !important;
+}
+
+html.dark-theme .bg-emerald-50,
+html.dark-theme .bg-emerald-50\/80,
+html.dark-theme .bg-emerald-50\/70 {
+  background-color: #064e3b33 !important;
+}
+
+html.dark-theme .bg-amber-50,
+html.dark-theme .bg-amber-50\/80,
+html.dark-theme .bg-amber-50\/90 {
+  background-color: #78350f33 !important;
+}
+
+html.dark-theme input,
+html.dark-theme textarea,
+html.dark-theme select {
+  background-color: #151e2e !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+/* ========================================================= */
+/* MODO ALTO CONTRASTE (HIGH CONTRAST)                       */
+/* ========================================================= */
+html.high-contrast,
+html.high-contrast body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+html.high-contrast .bg-white,
+html.high-contrast .bg-slate-50,
+html.high-contrast .bg-slate-100 {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+html.high-contrast .text-slate-900,
+html.high-contrast .text-slate-800,
+html.high-contrast .text-slate-700,
+html.high-contrast .text-slate-600,
+html.high-contrast .text-slate-500,
+html.high-contrast .text-slate-400 {
+  color: #ffffff !important;
+}

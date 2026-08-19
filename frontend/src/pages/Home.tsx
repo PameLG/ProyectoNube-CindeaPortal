@@ -77,7 +77,7 @@ export function Home() {
 
           <div className="pt-6">
             <Link
-              to="/login?role=student"
+              to="/estudiante"
               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm py-3.5 px-5 shadow-sm transition group-hover:gap-3"
             >
               <span>Ingresar al Portal Estudiantil</span>
@@ -123,7 +123,7 @@ export function Home() {
 
           <div className="pt-6">
             <Link
-              to="/login?role=teacher"
+              to="/login"
               className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-bold text-sm py-3.5 px-5 shadow-sm transition group-hover:gap-3"
             >
               <span>Iniciar Sesión como Docente</span>

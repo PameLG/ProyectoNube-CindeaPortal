@@ -36,8 +36,14 @@ import {
   Clock3,
   XCircle,
   Menu,
-  Award,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Moon,
+  Sun,
+  Contrast,
+  Loader2,
+  Download,
 } from 'lucide-react';
 import { cn } from '../utils';
 import { alerts } from '../utils/alerts';
@@ -56,6 +62,24 @@ function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+function formatCleanDate(dateStr?: string | null): string {
+  if (!dateStr) return 'Sin fecha límite';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('es-CR', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (_) {
+    return dateStr;
+  }
 }
 
 const processFiles = async (
@@ -155,6 +179,17 @@ export function StudentPortal() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'assignments' | 'grades' | 'tutor' | 'justifications'>('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('student_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('student_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
   
   // Perfil del estudiante activo con persistencia inmediata
   const [currentStudent, setCurrentStudent] = useState<StudentProfile>(() => getInitialStudentProfile(user));
@@ -243,10 +278,42 @@ export function StudentPortal() {
     }
   }, [user]);
 
+  // Configuración de Tema / Modo Nocturno de Descanso Visual CINDEA
+  const [theme, setTheme] = useState<'light' | 'dark' | 'contrast'>(() => {
+    return (localStorage.getItem('app_theme') as any) || 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.remove('dark-theme', 'high-contrast');
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark-theme');
+    } else if (theme === 'contrast') {
+      document.documentElement.classList.add('high-contrast');
+    }
+    localStorage.setItem('app_theme', theme);
+  }, [theme]);
+
+  // Actualizar título de la pestaña del navegador según la sección activa del estudiante
+  useEffect(() => {
+    const tabTitles: Record<string, string> = {
+      overview: 'Inicio · Portal Estudiantil',
+      assignments: 'Tareas · Portal Estudiantil',
+      grades: 'Calificaciones · Portal Estudiantil',
+      attendance: 'Asistencia · Portal Estudiantil',
+      tutor: 'Tutor IA · Portal Estudiantil',
+      announcements: 'Comunicados · Portal Estudiantil',
+      justifications: 'Justificaciones · Portal Estudiantil',
+    };
+    document.title = tabTitles[activeTab] || 'Portal Estudiantil · CINDEA MEP Cloud';
+  }, [activeTab]);
+
   // Subida de tarea (Soporta múltiples archivos: fotos, PDF, Word, audios)
   const [selectedTask, setSelectedTask] = useState<Assignment | null>(null);
   const [uploadFiles, setUploadFiles] = useState<AttachedFileItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploadPhase, setUploadPhase] = useState<string>('');
+  const [showConfirmSummary, setShowConfirmSummary] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
   const [isDraggingSubmission, setIsDraggingSubmission] = useState(false);
   const [isDraggingJust, setIsDraggingJust] = useState(false);
@@ -450,14 +517,27 @@ export function StudentPortal() {
 
   const myGradeSummary = calculateMyFinalGrade();
 
-  const handleUploadAssignment = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleUploadAssignment = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
     if (!selectedTask || uploadFiles.length === 0) {
       alerts.warning('Falta archivo', 'Por favor selecciona o arrastra al menos un archivo antes de confirmar la entrega.');
       return;
     }
     setUploading(true);
+    setUploadProgress(20);
+    setUploadPhase('Preparando archivo(s) para sincronización...');
     setUploadSuccess(null);
+
+    const progressTimer1 = setTimeout(() => {
+      setUploadProgress(55);
+      setUploadPhase('Sincronizando con carpeta oficial en Google Drive...');
+    }, 450);
+
+    const progressTimer2 = setTimeout(() => {
+      setUploadProgress(85);
+      setUploadPhase('Encriptando entrega y registrando comprobante en la nube...');
+    }, 950);
+
     try {
       const isMulti = uploadFiles.length > 1;
       const combinedName = isMulti
@@ -485,6 +565,11 @@ export function StudentPortal() {
         fileData: fileDataPayload,
       });
 
+      clearTimeout(progressTimer1);
+      clearTimeout(progressTimer2);
+      setUploadProgress(100);
+      setUploadPhase('¡Entrega guardada con éxito en Google Drive!');
+
       setUploadSuccess(
         isMulti
           ? `¡Tus ${uploadFiles.length} archivos se han entregado y guardado en Google Drive con éxito!`
@@ -493,13 +578,20 @@ export function StudentPortal() {
       setTimeout(() => {
         setSelectedTask(null);
         setUploadFiles([]);
+        setShowConfirmSummary(false);
         setUploadSuccess(null);
+        setUploading(false);
+        setUploadProgress(0);
+        setUploadPhase('');
         loadStudentData();
-      }, 2500);
+      }, 2200);
     } catch (_) {
-      alert('Error al enviar la tarea');
-    } finally {
+      clearTimeout(progressTimer1);
+      clearTimeout(progressTimer2);
+      alerts.error('Error', 'Error al enviar la tarea a Google Drive. Por favor intenta de nuevo.');
       setUploading(false);
+      setUploadProgress(0);
+      setUploadPhase('');
     }
   };
 
@@ -536,31 +628,69 @@ export function StudentPortal() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       <div className="flex flex-1 min-h-screen">
-        {/* Sidebar Desktop Limpia y Espaciosa (Idéntica a la vista Docente) */}
-        <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white md:flex shrink-0">
-          {/* Header del CINDEA */}
-          <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-blue-600/80 text-white flex items-center justify-center shadow-inner font-bold">
-                <Languages className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <div className="text-sm font-bold tracking-tight">CINDEA MEP Cloud</div>
-                <div className="text-[11px] text-blue-200">Portal Estudiantil</div>
-              </div>
-            </div>
+        {/* ========================================================= */}
+        {/* SIDEBAR DESKTOP PLEGABLE / COLAPSABLE                     */}
+        {/* ========================================================= */}
+        <aside
+          className={cn(
+            'hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out select-none sticky top-0 h-screen z-30 shrink-0',
+            sidebarCollapsed ? 'w-20' : 'w-64'
+          )}
+        >
+          {/* Header de la Sidebar */}
+          <div
+            className={cn(
+              'border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center min-h-[73px] shrink-0 transition-all duration-200',
+              sidebarCollapsed ? 'justify-center p-3' : 'justify-between p-4'
+            )}
+          >
+            {sidebarCollapsed ? (
+              <button
+                type="button"
+                onClick={toggleSidebar}
+                title="Desplegar menú lateral"
+                className="h-10 w-10 rounded-xl bg-blue-600/80 hover:bg-blue-500 text-white flex items-center justify-center shadow-inner transition hover:scale-105"
+              >
+                <PanelLeftOpen className="w-5 h-5 text-amber-300" />
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 rounded-xl bg-blue-600/80 text-white flex items-center justify-center shadow-inner font-bold shrink-0">
+                    <Languages className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold tracking-tight truncate">CINDEA MEP Cloud</div>
+                    <div className="text-[11px] text-blue-200 truncate">Portal Estudiantil</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={toggleSidebar}
+                  title="Plegar menú lateral"
+                  className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-blue-800/60 transition"
+                >
+                  <PanelLeftClose className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Navegación Simple y Amigable */}
-          <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
-            <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Menú Principal
-            </div>
+          <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
+            {!sidebarCollapsed && (
+              <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                Menú Principal
+              </div>
+            )}
 
+            {/* Inicio */}
             <button
               onClick={() => setActiveTab('dashboard')}
+              title="Inicio"
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-all group text-left',
+                'w-full flex items-center rounded-xl py-3 text-sm font-semibold transition-all group',
+                sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
                 activeTab === 'dashboard'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -572,13 +702,16 @@ export function StudentPortal() {
                   activeTab === 'dashboard' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                 )}
               />
-              <span>Inicio</span>
+              {!sidebarCollapsed && <span>Inicio</span>}
             </button>
 
+            {/* Tareas */}
             <button
               onClick={() => setActiveTab('assignments')}
+              title="Tareas y Entregas"
               className={cn(
-                'w-full flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold transition-all group text-left',
+                'w-full flex items-center rounded-xl py-3 text-sm font-semibold transition-all group',
+                sidebarCollapsed ? 'justify-center px-0 relative' : 'justify-between px-3.5',
                 activeTab === 'assignments'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -591,12 +724,13 @@ export function StudentPortal() {
                     activeTab === 'assignments' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                   )}
                 />
-                <span>Tareas y Entregas</span>
+                {!sidebarCollapsed && <span>Tareas y Entregas</span>}
               </div>
               {assignments.length > 0 && (
                 <span
                   className={cn(
                     'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    sidebarCollapsed && 'absolute top-1 right-2 px-1.5 py-0.2',
                     activeTab === 'assignments' ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-600'
                   )}
                 >
@@ -605,10 +739,13 @@ export function StudentPortal() {
               )}
             </button>
 
+            {/* Calificaciones */}
             <button
               onClick={() => setActiveTab('grades')}
+              title="Calificaciones MEP"
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-all group text-left',
+                'w-full flex items-center rounded-xl py-3 text-sm font-semibold transition-all group',
+                sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
                 activeTab === 'grades'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -620,13 +757,16 @@ export function StudentPortal() {
                   activeTab === 'grades' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                 )}
               />
-              <span>Calificaciones MEP</span>
+              {!sidebarCollapsed && <span>Calificaciones MEP</span>}
             </button>
 
+            {/* Comprobantes */}
             <button
               onClick={() => setActiveTab('justifications')}
+              title="Comprobantes de Ausencia"
               className={cn(
-                'w-full flex items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold transition-all group text-left',
+                'w-full flex items-center rounded-xl py-3 text-sm font-semibold transition-all group',
+                sidebarCollapsed ? 'justify-center px-0 relative' : 'justify-between px-3.5',
                 activeTab === 'justifications'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -639,12 +779,13 @@ export function StudentPortal() {
                     activeTab === 'justifications' ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'
                   )}
                 />
-                <span>Comprobantes de Ausencia</span>
+                {!sidebarCollapsed && <span>Comprobantes</span>}
               </div>
               {myJustifications.length > 0 && (
                 <span
                   className={cn(
                     'text-[10px] font-bold px-2 py-0.5 rounded-full',
+                    sidebarCollapsed && 'absolute top-1 right-2 px-1.5 py-0.2',
                     activeTab === 'justifications' ? 'bg-blue-500 text-white' : 'bg-amber-100 text-amber-800'
                   )}
                 >
@@ -653,10 +794,13 @@ export function StudentPortal() {
               )}
             </button>
 
+            {/* Tutor IA */}
             <button
               onClick={() => setActiveTab('tutor')}
+              title="English AI Tutor"
               className={cn(
-                'w-full flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-all group text-left',
+                'w-full flex items-center rounded-xl py-3 text-sm font-semibold transition-all group',
+                sidebarCollapsed ? 'justify-center px-0' : 'gap-3 px-3.5',
                 activeTab === 'tutor'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -668,24 +812,26 @@ export function StudentPortal() {
                   activeTab === 'tutor' ? 'text-amber-300' : 'text-slate-400 group-hover:text-blue-600'
                 )}
               />
-              <span>English AI Tutor</span>
+              {!sidebarCollapsed && <span>English AI Tutor</span>}
             </button>
           </nav>
 
           {/* Perfil del Estudiante en el Footer de la Sidebar */}
-          <div className="border-t border-slate-100 p-4 bg-slate-50/70">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="border-t border-slate-100 p-3 bg-slate-50/70">
+            <div className={cn('flex items-center gap-3 min-w-0', sidebarCollapsed ? 'justify-center' : '')}>
               <div className="h-9 w-9 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                 {currentStudent.name.charAt(0)}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-900 truncate">
-                  {currentStudent.name}
-                </p>
-                <p className="text-[11px] text-slate-500 truncate">
-                  Cédula: {currentStudent.carnet}
-                </p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-slate-900 truncate">
+                    {currentStudent.name}
+                  </p>
+                  <p className="text-[11px] text-slate-500 truncate">
+                    Cédula: {currentStudent.carnet}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </aside>
@@ -708,7 +854,53 @@ export function StudentPortal() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              {/* Selector de Modo Visual / Descanso Nocturno CINDEA */}
+              <div className="flex items-center bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  title="Modo Claro (Diurno)"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'light'
+                      ? 'bg-white text-blue-700 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Día</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  title="Modo Nocturno / Descanso Visual CINDEA"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'dark'
+                      ? 'bg-slate-800 text-amber-300 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Noche</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('contrast')}
+                  title="Alto Contraste (Accesibilidad)"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'contrast'
+                      ? 'bg-black text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Contrast className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Contraste</span>
+                </button>
+              </div>
+
               <Button
                 variant="secondary"
                 size="sm"
@@ -718,7 +910,7 @@ export function StudentPortal() {
                     localStorage.removeItem(STUDENT_COURSE_KEY);
                   } catch {}
                   await logout();
-                  window.location.href = '/login';
+                  window.location.href = '/estudiante';
                 }}
                 className="text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 border-slate-200"
               >
@@ -1074,71 +1266,68 @@ export function StudentPortal() {
                     <div
                       key={a.id}
                       className={cn(
-                        'rounded-xl border p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition space-y-4',
+                        'rounded-2xl border bg-white p-5 shadow-2xs hover:shadow-sm transition flex flex-col justify-between space-y-4',
                         myGrade
-                          ? 'bg-white border-blue-300 ring-1 ring-blue-200'
+                          ? 'border-blue-200'
                           : mySub
-                          ? 'bg-white border-emerald-300 ring-1 ring-emerald-200'
-                          : 'bg-white border-slate-200'
+                          ? 'border-emerald-200'
+                          : 'border-slate-200/90'
                       )}
                     >
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700">
+                      <div className="space-y-3">
+                        {/* Cabecera limpia: Categoría y Puntos a la izquierda, Estado a la derecha */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-slate-100 text-slate-700">
                               {a.category || 'Tarea'}
                             </span>
-                            {a.submissionType === 'in_class' ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200">
-                                📝 Realizado en Aula / Cuaderno
-                              </span>
-                            ) : (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-                                💻 Entrega Digital
-                              </span>
-                            )}
-
-                            {myGrade ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300 flex items-center gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                                Calificado ({myGrade.score}/{myGrade.maxScore} pts)
-                              </span>
-                            ) : mySub ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                Entregado
-                              </span>
-                            ) : a.submissionType === 'in_class' ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                Pendiente de Nota
-                              </span>
-                            ) : isWithinDeadline ? (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                Pendiente
-                              </span>
-                            ) : (
-                              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
-                                <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                                No entregado
-                              </span>
-                            )}
+                            <span className="text-[11px] font-mono font-bold text-slate-400">
+                              {a.maxScore} pts
+                            </span>
                           </div>
-                          <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded shrink-0">
-                            {a.maxScore} pts
-                          </span>
+
+                          {myGrade ? (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                              {myGrade.score}/{myGrade.maxScore} pts
+                            </span>
+                          ) : mySub ? (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              Entregado
+                            </span>
+                          ) : a.submissionType === 'in_class' ? (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-slate-500" />
+                              Evaluación en aula
+                            </span>
+                          ) : isWithinDeadline ? (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" />
+                              Pendiente
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                              Vencida
+                            </span>
+                          )}
                         </div>
 
-                        <h3 className="text-base font-bold text-slate-900 mt-2.5">{a.title}</h3>
-                        <p className="text-xs text-slate-600 mt-1 leading-relaxed">{a.description}</p>
+                        {/* Título y descripción */}
+                        <div>
+                          <h3 className="text-base font-bold text-slate-900">{a.title}</h3>
+                          {a.description && (
+                            <p className="text-xs text-slate-600 mt-1 leading-relaxed">{a.description}</p>
+                          )}
+                        </div>
 
-                        {/* Material de Guía / Instrucciones de la docente */}
+                        {/* Material / Guía del docente (si existe) */}
                         {a.attachmentName && (
-                          <div className="mt-3 p-2.5 bg-indigo-50/80 rounded-xl border border-indigo-200/80 flex items-center justify-between text-xs text-indigo-950">
-                            <span className="truncate font-semibold flex items-center gap-1.5 text-[11px]">
-                              <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                              Guía: {a.attachmentName}
+                          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                            <span className="truncate font-medium text-slate-700 flex items-center gap-1.5 text-[11px]">
+                              <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                              Guía: <span className="font-semibold text-slate-900 truncate max-w-[180px]">{a.attachmentName}</span>
                             </span>
                             <button
                               type="button"
@@ -1157,145 +1346,113 @@ export function StudentPortal() {
                                 el.click();
                                 document.body.removeChild(el);
                               }}
-                              className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs shrink-0 transition"
+                              className="text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs shrink-0 transition flex items-center gap-1"
                             >
-                              📥 Descargar Guía
+                              <Download className="w-3 h-3 text-blue-600" />
+                              <span>Descargar</span>
                             </button>
                           </div>
                         )}
 
-                        {/* Detalle si fue calificado directamente por la docente (presencial o papel) */}
+                        {/* Detalle si ya fue calificado */}
                         {myGrade && (
-                          <div className="mt-3 p-3 bg-blue-50/80 rounded-xl border border-blue-200 space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-blue-950 flex items-center gap-1.5">
-                                <Award className="w-4 h-4 text-blue-600" />
-                                Evaluación Calificada por Docente
-                              </span>
-                              <span className="bg-blue-600 text-white font-mono font-black px-2 py-0.5 rounded text-xs">
-                                {myGrade.score} / {myGrade.maxScore} pts
-                              </span>
+                          <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 space-y-1.5 text-xs text-blue-950">
+                            <div className="flex items-center justify-between font-bold text-[11px]">
+                              <span>Nota de la docente:</span>
+                              <span className="font-mono font-black">{myGrade.score} / {myGrade.maxScore} pts</span>
                             </div>
                             {myGrade.notes && (
-                              <div className="text-[11px] text-blue-900 bg-white/90 p-2 rounded-lg border border-blue-100">
-                                <strong>Retroalimentación:</strong> {myGrade.notes}
-                              </div>
-                            )}
-                            {myGrade.attachmentData && (
-                              <div className="flex items-center justify-between pt-1 text-[11px]">
-                                <span className="text-slate-600">Evidencia de examen físico calificado:</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const el = document.createElement('a');
-                                    el.href = myGrade.attachmentData!;
-                                    el.download = myGrade.attachmentName || 'Examen_Calificado.pdf';
-                                    document.body.appendChild(el);
-                                    el.click();
-                                    document.body.removeChild(el);
-                                  }}
-                                  className="text-blue-700 font-bold underline hover:text-blue-900"
-                                >
-                                  📄 Ver Examen Calificado
-                                </button>
-                              </div>
+                              <p className="text-[11px] text-blue-900 italic font-medium">"{myGrade.notes}"</p>
                             )}
                           </div>
                         )}
 
-                        {/* Detalle de entrega del estudiante si subió archivo digital */}
+                        {/* Detalle de entrega limpia (si el estudiante entregó) */}
                         {mySub && !myGrade && (
-                          <div className="mt-3 p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 space-y-2 text-xs">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-1.5 font-bold text-emerald-950 truncate">
-                                <FolderCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                                <span className="truncate">{mySub.fileName}</span>
+                          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
+                            <div className="space-y-0.5">
+                              <div className="font-semibold text-slate-800 flex items-center gap-1.5 text-[11px]">
+                                <FolderCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span className="truncate max-w-[180px] sm:max-w-[240px]">{mySub.fileName}</span>
                               </div>
-                              <span className="text-[10px] bg-emerald-200/80 text-emerald-900 font-bold px-1.5 py-0.5 rounded shrink-0">
-                                ☁️ Google Drive
-                              </span>
+                              <p className="text-[10px] text-slate-400 font-medium">
+                                Entregado: {formatCleanDate(mySub.submittedAt)}
+                              </p>
                             </div>
-                            <div className="text-[11px] text-emerald-800 flex items-center justify-between">
-                              <span>Entregado el {new Date(mySub.submittedAt).toLocaleString('es-CR')}</span>
-                              {mySub.fileData && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const el = document.createElement('a');
-                                    el.href = mySub.fileData!;
-                                    el.download = mySub.fileName;
-                                    document.body.appendChild(el);
-                                    el.click();
-                                    document.body.removeChild(el);
-                                  }}
-                                  className="text-blue-700 underline font-bold hover:text-blue-900"
-                                >
-                                  📥 Ver entrega
-                                </button>
-                              )}
-                            </div>
+                            {mySub.fileData && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (mySub.fileData?.startsWith('{"isMulti":true')) {
+                                    try {
+                                      const parsed = JSON.parse(mySub.fileData);
+                                      const files: any[] = parsed.files || [];
+                                      files.forEach((f, idx) => {
+                                        setTimeout(() => {
+                                          const el = document.createElement('a');
+                                          el.href = f.data;
+                                          el.download = f.name;
+                                          document.body.appendChild(el);
+                                          el.click();
+                                          document.body.removeChild(el);
+                                        }, idx * 250);
+                                      });
+                                      return;
+                                    } catch (_) {}
+                                  }
+                                  const el = document.createElement('a');
+                                  el.href = mySub.fileData!;
+                                  el.download = mySub.fileName || 'Entrega_Tarea';
+                                  document.body.appendChild(el);
+                                  el.click();
+                                  document.body.removeChild(el);
+                                }}
+                                className="text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition shadow-2xs shrink-0 flex items-center gap-1.5"
+                                title="Descargar comprobante de entrega"
+                              >
+                                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Descargar</span>
+                              </button>
+                            )}
                           </div>
                         )}
-
-                        <div className="mt-4 pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-500">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-rose-500" />
-                            <span>
-                              Fecha / Límite:{' '}
-                              <strong>{a.dueDate ? new Date(a.dueDate).toLocaleString('es-CR') : 'Próximamente'}</strong>
-                            </span>
-                          </div>
-                        </div>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-                        {myGrade ? (
-                          <div className="w-full py-2 px-3 rounded-xl bg-blue-50 border border-blue-200 text-center text-[11px] text-blue-800 font-bold flex items-center justify-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                            Evaluación registrada en el acta oficial
-                          </div>
-                        ) : a.submissionType === 'in_class' ? (
-                          <div className="w-full py-2.5 px-3 rounded-xl bg-amber-50/90 border border-amber-200 text-center text-[11px] text-amber-900 font-semibold flex items-center justify-center gap-1.5">
-                            <span>📝 Actividad evaluada en aula / cuaderno. La docente calificará directamente.</span>
-                          </div>
-                        ) : mySub ? (
-                          isWithinDeadline ? (
+                      {/* Pie de tarjeta con fecha límite y botón de acción */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium truncate">
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>Límite: {formatCleanDate(a.dueDate)}</span>
+                        </div>
+
+                        <div className="shrink-0">
+                          {mySub && isWithinDeadline ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedTask(a);
+                                setUploadFiles([]);
+                              }}
+                              className="text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded-lg transition shadow-2xs"
+                            >
+                              Reemplazar
+                            </button>
+                          ) : !mySub && isWithinDeadline && a.submissionType !== 'in_class' ? (
                             <Button
-                              variant="secondary"
+                              variant="primary"
                               size="sm"
                               onClick={() => {
                                 setSelectedTask(a);
                                 setUploadFiles([]);
                               }}
-                              className="w-full text-xs font-bold border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100"
+                              className="text-[11px] font-bold bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg shadow-2xs"
                             >
-                              <FileEdit className="w-3.5 h-3.5 mr-1.5 text-amber-700" />
-                              ✏️ Modificar / Reemplazar Entrega
+                              Subir entrega
                             </Button>
-                          ) : (
-                            <div className="w-full py-2 px-3 rounded-xl bg-slate-100 border border-slate-200 text-center text-[11px] text-slate-500 font-bold flex items-center justify-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              Plazo cerrado • Entrega finalizada
-                            </div>
-                          )
-                        ) : isWithinDeadline ? (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTask(a);
-                              setUploadFiles([]);
-                            }}
-                            className="w-full text-xs font-bold bg-blue-600 hover:bg-blue-700"
-                          >
-                            <FolderUp className="w-3.5 h-3.5 mr-1.5" />
-                            Realizar y Subir Entrega
-                          </Button>
-                        ) : (
-                          <div className="w-full py-2 px-3 rounded-xl bg-rose-50 border border-rose-200 text-center text-[11px] text-rose-700 font-bold">
-                            ⚠️ Plazo de entrega vencido
-                          </div>
-                        )}
+                          ) : !mySub && !isWithinDeadline ? (
+                            <span className="text-[11px] font-semibold text-rose-500">Plazo cerrado</span>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1939,182 +2096,290 @@ export function StudentPortal() {
         open={selectedTask !== null}
         title={
           selectedTask
-            ? submissions.some((s) => s.assignmentId === selectedTask.id)
+            ? showConfirmSummary
+              ? `📋 Confirmación de Entrega: ${selectedTask.title}`
+              : submissions.some((s) => s.assignmentId === selectedTask.id)
               ? `Reemplazar Entrega: ${selectedTask.title}`
               : `Entregar Asignación: ${selectedTask.title}`
             : 'Entregar Asignación'
         }
-        onClose={() => setSelectedTask(null)}
+        onClose={() => {
+          if (!uploading) {
+            setSelectedTask(null);
+            setShowConfirmSummary(false);
+          }
+        }}
         footer={
-          <>
-            <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
-              Cancelar
-            </Button>
-            <Button type="submit" form="student-upload-form" disabled={uploading || uploadFiles.length === 0}>
-              {uploading
-                ? 'Guardando en la Nube / Drive...'
-                : selectedTask && submissions.some((s) => s.assignmentId === selectedTask.id)
-                ? 'Reemplazar Archivo(s)'
-                : 'Confirmar y Subir Entrega'}
-            </Button>
-          </>
-        }
-      >
-        <form id="student-upload-form" onSubmit={handleUploadAssignment} className="space-y-4">
-          {/* Instrucciones de la docente (solo si existen) */}
-          {selectedTask?.description && selectedTask.description.trim().length > 0 && (
-            <div className="text-xs text-slate-700 bg-blue-50/80 p-3.5 rounded-xl border border-blue-200/80 leading-relaxed space-y-1">
-              <div className="font-bold text-blue-950 flex items-center gap-1.5">
-                <FileText className="w-3.5 h-3.5 text-blue-600" />
-                <span>Instrucciones de la Docente:</span>
-              </div>
-              <p className="text-slate-700">{selectedTask.description}</p>
-            </div>
-          )}
-
-          {/* Guía de la docente si existe adjunto */}
-          {selectedTask?.attachmentName && (
-            <div className="p-3 bg-indigo-50/80 rounded-xl border border-indigo-200/80 flex items-center justify-between text-xs text-indigo-950">
-              <span className="truncate font-semibold flex items-center gap-1.5 text-[11px]">
-                <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-                Guía de Trabajo: <strong>{selectedTask.attachmentName}</strong>
-              </span>
-              <button
+          showConfirmSummary ? (
+            <>
+              {!uploading && (
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setShowConfirmSummary(false)}
+                >
+                  ← Volver a modificar
+                </Button>
+              )}
+              <Button
+                type="button"
+                onClick={() => handleUploadAssignment()}
+                disabled={uploading}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              >
+                {uploading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sincronizando con Drive...
+                  </span>
+                ) : (
+                  '✓ Confirmar y Enviar a Google Drive'
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
+                Cancelar
+              </Button>
+              <Button
                 type="button"
                 onClick={() => {
-                  const el = document.createElement('a');
-                  if (selectedTask.attachmentData && selectedTask.attachmentData.startsWith('data:')) {
-                    el.href = selectedTask.attachmentData;
-                  } else if (selectedTask.attachmentData) {
-                    el.href = URL.createObjectURL(new Blob([selectedTask.attachmentData]));
-                  } else {
-                    el.href = 'https://drive.google.com/drive/folders/1sDpkjftZUFewVSGDemeyViPUlVUBki0L?authuser=pruebaproyecto551@gmail.com';
-                    el.target = '_blank';
+                  if (uploadFiles.length === 0) {
+                    alerts.warning('Falta archivo', 'Por favor adjunta al menos un archivo antes de continuar.');
+                    return;
                   }
-                  el.download = selectedTask.attachmentName || 'Guia.pdf';
-                  document.body.appendChild(el);
-                  el.click();
-                  document.body.removeChild(el);
+                  setShowConfirmSummary(true);
                 }}
-                className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs shrink-0 transition"
+                disabled={uploadFiles.length === 0}
               >
-                📥 Descargar Guía
-              </button>
+                Revisar y Confirmar ({uploadFiles.length}) →
+              </Button>
+            </>
+          )
+        }
+      >
+        {showConfirmSummary && selectedTask ? (
+          <div className="space-y-4 py-1">
+            {/* Pantalla de Resumen antes de Enviar */}
+            <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-200/90 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-blue-950 text-sm">{selectedTask.title}</span>
+                <span className="font-mono font-bold bg-blue-600 text-white px-2 py-0.5 rounded-md">
+                  {selectedTask.maxScore} pts
+                </span>
+              </div>
+              <p className="text-blue-900">
+                {currentCourse?.name} · {selectedTask.category || 'Tarea'}
+              </p>
             </div>
-          )}
 
-          {/* Lista de archivos adjuntos y Dropzone Drag & Drop */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-700">
-                Archivos de la Entrega {uploadFiles.length > 0 && `(${uploadFiles.length})`}:
-              </label>
-              {uploadFiles.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setUploadFiles([])}
-                  className="text-[11px] text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
-                >
-                  <X className="w-3 h-3" /> Quitar todos
-                </button>
-              )}
-            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+                <span>Archivos listos para enviar ({uploadFiles.length}):</span>
+                <span className="text-slate-400">
+                  Peso total: {formatFileSize(uploadFiles.reduce((acc, f) => acc + f.size, 0))}
+                </span>
+              </div>
 
-            {uploadFiles.length > 0 && (
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {uploadFiles.map((file) => (
-                  <div key={file.id} className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 flex items-center justify-between text-xs gap-3">
-                    <div className="flex items-center gap-2.5 truncate text-blue-950 font-semibold">
-                      {file.data.startsWith('data:image/') ? (
-                        <img src={file.data} alt={file.name} className="w-7 h-7 object-cover rounded-md border border-blue-300 shrink-0" />
-                      ) : (
-                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
-                      )}
-                      <div className="truncate">
-                        <div className="truncate text-slate-900">{file.name}</div>
-                        <div className="text-[10px] text-slate-400 font-normal">{formatFileSize(file.size)}</div>
-                      </div>
+                {uploadFiles.map((file, idx) => (
+                  <div key={file.id || idx} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 truncate text-slate-800 font-medium">
+                      <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span className="truncate">{file.name}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setUploadFiles((prev) => prev.filter((f) => f.id !== file.id))}
-                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
-                      title="Quitar este archivo"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    <span className="text-[10px] text-slate-400 font-mono shrink-0 ml-2">
+                      {formatFileSize(file.size)}
+                    </span>
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Barra de Progreso y Animación en Vivo durante la Subida */}
+            {uploading ? (
+              <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 space-y-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-indigo-950 flex items-center gap-2">
+                    <UploadCloud className="w-4 h-4 text-indigo-600 animate-pulse" />
+                    {uploadPhase || 'Sincronizando con Google Drive...'}
+                  </span>
+                  <span className="font-mono font-bold text-indigo-700">{uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-indigo-200/70 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-indigo-700 text-center">
+                  Guardando en la carpeta oficial del curso en la nube...
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 leading-relaxed">
+                ☁️ <strong>Garantía de Entrega:</strong> Al confirmar, tus documentos se cifrarán y sincronizarán de forma permanente en Google Drive para la revisión de la docente.
+              </div>
             )}
 
-            <label
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingSubmission(true);
-              }}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingSubmission(true);
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingSubmission(false);
-              }}
-              onDrop={async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsDraggingSubmission(false);
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                  const updated = await processFiles(e.dataTransfer.files, uploadFiles);
-                  setUploadFiles(updated);
-                }
-              }}
-              className={cn(
-                'border-2 border-dashed rounded-2xl p-5 text-center space-y-2 cursor-pointer transition block group',
-                isDraggingSubmission
-                  ? 'border-blue-500 bg-blue-100/70 scale-[1.01] ring-4 ring-blue-200'
-                  : 'border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/40'
+            {uploadSuccess && (
+              <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-2xl border border-emerald-200 flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{uploadSuccess}</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <form id="student-upload-form" onSubmit={(e) => { e.preventDefault(); setShowConfirmSummary(true); }} className="space-y-4">
+            {/* Instrucciones de la docente (solo si existen) */}
+            {selectedTask?.description && selectedTask.description.trim().length > 0 && (
+              <div className="text-xs text-slate-700 bg-blue-50/80 p-3.5 rounded-xl border border-blue-200/80 leading-relaxed space-y-1">
+                <div className="font-bold text-blue-950 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Instrucciones de la Docente:</span>
+                </div>
+                <p className="text-slate-700">{selectedTask.description}</p>
+              </div>
+            )}
+
+            {/* Guía de la docente si existe adjunto */}
+            {selectedTask?.attachmentName && (
+              <div className="p-3 bg-indigo-50/80 rounded-xl border border-indigo-200/80 flex items-center justify-between text-xs text-indigo-950">
+                <span className="truncate font-semibold flex items-center gap-1.5 text-[11px]">
+                  <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                  Guía de Trabajo: <strong>{selectedTask.attachmentName}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.createElement('a');
+                    if (selectedTask.attachmentData && selectedTask.attachmentData.startsWith('data:')) {
+                      el.href = selectedTask.attachmentData;
+                    } else if (selectedTask.attachmentData) {
+                      el.href = URL.createObjectURL(new Blob([selectedTask.attachmentData]));
+                    } else {
+                      el.href = 'https://drive.google.com/drive/folders/1sDpkjftZUFewVSGDemeyViPUlVUBki0L?authuser=pruebaproyecto551@gmail.com';
+                      el.target = '_blank';
+                    }
+                    el.download = selectedTask.attachmentName || 'Guia.pdf';
+                    document.body.appendChild(el);
+                    el.click();
+                    document.body.removeChild(el);
+                  }}
+                  className="text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs shrink-0 transition"
+                >
+                  📥 Descargar Guía
+                </button>
+              </div>
+            )}
+
+            {/* Lista de archivos adjuntos y Dropzone Drag & Drop */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-700">
+                  Archivos de la Entrega {uploadFiles.length > 0 && `(${uploadFiles.length})`}:
+                </label>
+                {uploadFiles.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setUploadFiles([])}
+                    className="text-[11px] text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                  >
+                    <X className="w-3 h-3" /> Quitar todos
+                  </button>
+                )}
+              </div>
+
+              {uploadFiles.length > 0 && (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {uploadFiles.map((file) => (
+                    <div key={file.id} className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 flex items-center justify-between text-xs gap-3">
+                      <div className="flex items-center gap-2.5 truncate text-blue-950 font-semibold">
+                        {file.data.startsWith('data:image/') ? (
+                          <img src={file.data} alt={file.name} className="w-7 h-7 object-cover rounded-md border border-blue-300 shrink-0" />
+                        ) : (
+                          <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                        )}
+                        <div className="truncate">
+                          <div className="truncate text-slate-900">{file.name}</div>
+                          <div className="text-[10px] text-slate-400 font-normal">{formatFileSize(file.size)}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadFiles((prev) => prev.filter((f) => f.id !== file.id))}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        title="Quitar este archivo"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               )}
-            >
-              <input
-                type="file"
-                multiple
-                className="hidden"
-                accept=".pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.jpg,.jpeg,.png,.txt,.zip,.rar"
-                onChange={async (e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    const updated = await processFiles(e.target.files, uploadFiles);
+
+              <label
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingSubmission(true);
+                }}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingSubmission(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingSubmission(false);
+                }}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingSubmission(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    const updated = await processFiles(e.dataTransfer.files, uploadFiles);
                     setUploadFiles(updated);
-                    e.target.value = '';
                   }
                 }}
-              />
-              <FolderUp
                 className={cn(
-                  'w-6 h-6 mx-auto transition',
-                  isDraggingSubmission ? 'text-blue-600 animate-bounce' : 'text-slate-400 group-hover:text-blue-600'
+                  'border-2 border-dashed rounded-2xl p-5 text-center space-y-2 cursor-pointer transition block group',
+                  isDraggingSubmission
+                    ? 'border-blue-500 bg-blue-100/70 scale-[1.01] ring-4 ring-blue-200'
+                    : 'border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/40'
                 )}
-              />
-              <div className="text-xs font-bold text-slate-700">
-                {uploadFiles.length > 0 ? '+ Adjuntar más archivos o fotos' : 'Arrastra tus archivos aquí o haz clic para seleccionar'}
-              </div>
-              <div className="text-[11px] text-slate-400">
-                Puedes subir varios archivos (Word, PDF, Fotos, Audio MP3/M4A, ZIP) · Máx. 15 MB c/u
-              </div>
-            </label>
-          </div>
-
-          {uploadSuccess && (
-            <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-2xl border border-emerald-200 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{uploadSuccess}</span>
+              >
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.jpg,.jpeg,.png,.txt,.zip,.rar"
+                  onChange={async (e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const updated = await processFiles(e.target.files, uploadFiles);
+                      setUploadFiles(updated);
+                      e.target.value = '';
+                    }
+                  }}
+                />
+                <FolderUp
+                  className={cn(
+                    'w-6 h-6 mx-auto transition',
+                    isDraggingSubmission ? 'text-blue-600 animate-bounce' : 'text-slate-400 group-hover:text-blue-600'
+                  )}
+                />
+                <div className="text-xs font-bold text-slate-700">
+                  {uploadFiles.length > 0 ? '+ Adjuntar más archivos o fotos' : 'Arrastra tus archivos aquí o haz clic para seleccionar'}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  Puedes subir varios archivos (Word, PDF, Fotos, Audio MP3/M4A, ZIP) · Máx. 15 MB c/u
+                </div>
+              </label>
             </div>
-          )}
-        </form>
+          </form>
+        )}
       </Modal>
         </div>
       </div>

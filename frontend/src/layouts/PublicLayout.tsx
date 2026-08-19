@@ -34,7 +34,7 @@ export function PublicLayout() {
           {/* Navegación y Accesos */}
           <div className="flex items-center gap-2.5">
             <Link
-              to="/login?role=student"
+              to="/estudiante"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition shadow-2xs"
             >
               <User className="w-3.5 h-3.5 text-emerald-600" />
@@ -42,7 +42,7 @@ export function PublicLayout() {
             </Link>
 
             <Link
-              to="/login?role=teacher"
+              to="/login"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-blue-700 hover:bg-blue-800 transition shadow-sm"
             >
               <ShieldCheck className="w-3.5 h-3.5" />

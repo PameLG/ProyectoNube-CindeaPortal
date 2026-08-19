@@ -21,6 +21,9 @@ import {
   PanelLeftOpen,
   Menu,
   X,
+  Sun,
+  Moon,
+  Contrast,
 } from 'lucide-react';
 
 const navItems = [
@@ -45,6 +48,22 @@ export function DashboardLayout() {
     return localStorage.getItem('sidebar_collapsed') === 'true';
   });
   const [mobileOpen, setMobileOpen] = useState<boolean>(false);
+
+  // Selector de tema (Día / Descanso Nocturno / Alto Contraste)
+  const [theme, setTheme] = useState<'light' | 'dark' | 'contrast'>(() => {
+    return (localStorage.getItem('app_theme') as any) || 'light';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_theme', theme);
+    const root = document.documentElement;
+    root.classList.remove('dark-theme', 'high-contrast');
+    if (theme === 'dark') {
+      root.classList.add('dark-theme');
+    } else if (theme === 'contrast') {
+      root.classList.add('high-contrast');
+    }
+  }, [theme]);
 
   useEffect(() => {
     justificationsService.getPendingCount().then(setPendingJustCount).catch(() => {});
@@ -305,7 +324,53 @@ export function DashboardLayout() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              {/* Selector de Modo Visual / Descanso Nocturno CINDEA */}
+              <div className="flex items-center bg-slate-100/90 rounded-xl p-0.5 border border-slate-200/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  title="Modo Claro (Diurno)"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'light'
+                      ? 'bg-white text-blue-700 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Sun className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Día</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  title="Modo Nocturno / Descanso Visual CINDEA"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'dark'
+                      ? 'bg-slate-800 text-amber-300 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Moon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Noche</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme('contrast')}
+                  title="Alto Contraste (Accesibilidad)"
+                  className={cn(
+                    'px-2 py-1 rounded-lg font-bold flex items-center gap-1 transition text-[11px]',
+                    theme === 'contrast'
+                      ? 'bg-black text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  <Contrast className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Contraste</span>
+                </button>
+              </div>
+
               <Button
                 variant="secondary"
                 size="sm"

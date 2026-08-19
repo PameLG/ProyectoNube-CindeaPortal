@@ -41,12 +41,34 @@ export const submissionsController = {
       const safeFileName = data.fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
       const cloudStorageUrl = `/CloudStorage/2026/Entregas/${data.assignmentId}/${safeFileName}`;
 
-      // Buscar si ya existía una entrega anterior de este estudiante para esta tarea
-      let oldFileName: string | undefined;
+      // Buscar si ya existía una entrega anterior de este estudiante para esta tarea y extraer TODOS sus archivos viejos
+      const oldFilesToDelete: string[] = [];
       try {
         const prevSubmissions = await submissionQueries.listByStudent(data.studentId);
         const existingSub = prevSubmissions.rows.find((s) => s.assignmentId === data.assignmentId);
-        oldFileName = existingSub?.fileName;
+        if (existingSub) {
+          if (existingSub.fileData && existingSub.fileData.startsWith('{"isMulti":true')) {
+            try {
+              const multi = JSON.parse(existingSub.fileData);
+              if (Array.isArray(multi.files)) {
+                for (const f of multi.files) {
+                  if (f.name) oldFilesToDelete.push(f.name);
+                }
+              }
+            } catch (_) {}
+          }
+          if (existingSub.fileName) {
+            if (existingSub.fileName.includes(':')) {
+              const afterColon = existingSub.fileName.split(':')[1];
+              if (afterColon) {
+                const parts = afterColon.split(',').map((p) => p.trim()).filter(Boolean);
+                oldFilesToDelete.push(...parts);
+              }
+            } else {
+              oldFilesToDelete.push(existingSub.fileName);
+            }
+          }
+        }
       } catch (_) {}
 
       const result = await submissionQueries.createOrUpdate({
@@ -59,27 +81,33 @@ export const submissionsController = {
         status: 'submitted',
       });
 
-      // Subir archivo real a la subcarpeta del curso y tarea en Google Drive (eliminando el anterior si se reemplazó)
+      // Subir archivo(s) a la subcarpeta del curso y tarea en Google Drive (purgando los anteriores primero)
       try {
         const { assignmentQueries } = await import('../database/queries/assignments');
         const { courseQueries } = await import('../database/queries/courses');
-        const { uploadFileToDrive } = await import('../integrations/google/google.service');
+        const { uploadFileToDrive, deleteFilesFromDrive } = await import('../integrations/google/google.service');
         const assignRes = await assignmentQueries.findById(data.assignmentId);
         const assignment = assignRes.rows[0];
         if (assignment) {
           const courseRes = await courseQueries.findById(assignment.course_id);
           const courseName = courseRes.rows[0]?.name || 'Inglés CINDEA';
+
+          // Eliminar explícitamente cualquier archivo de la entrega anterior
+          if (oldFilesToDelete.length > 0) {
+            await deleteFilesFromDrive(courseName, assignment.title, oldFilesToDelete);
+          }
+
           if (data.fileData && data.fileData.startsWith('{"isMulti":true')) {
             try {
               const multi = JSON.parse(data.fileData);
               if (Array.isArray(multi.files)) {
                 for (const item of multi.files) {
-                  await uploadFileToDrive(courseName, assignment.title, item.name, item.data, undefined);
+                  await uploadFileToDrive(courseName, assignment.title, item.name, item.data, oldFilesToDelete);
                 }
               }
             } catch (_) {}
           } else {
-            await uploadFileToDrive(courseName, assignment.title, data.fileName, data.fileData, oldFileName);
+            await uploadFileToDrive(courseName, assignment.title, data.fileName, data.fileData, oldFilesToDelete);
           }
         }
       } catch (err: any) {

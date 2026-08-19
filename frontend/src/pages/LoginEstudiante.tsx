@@ -1,15 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
 import { ErrorMessage } from '../components/ErrorMessage';
 import {
   GraduationCap,
-  CreditCard,
   ArrowRight,
+  Eye,
+  EyeOff,
   KeyRound,
-  BookOpen,
+  Sparkles,
+  Award,
+  FileCheck2,
+  Bot,
 } from 'lucide-react';
 
 export function LoginEstudiante() {
@@ -18,8 +21,14 @@ export function LoginEstudiante() {
 
   const [studentCedula, setStudentCedula] = useState('');
   const [studentPin, setStudentPin] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Estado dinámico del estudiante según la cédula ingresada
+  const [isInitialAccount, setIsInitialAccount] = useState<boolean | null>(null);
+  const [studentFirstName, setStudentFirstName] = useState<string | null>(null);
+  const [showManualHelp, setShowManualHelp] = useState(false);
 
   // Si ya está autenticado como estudiante, redirigir directo
   useEffect(() => {
@@ -27,11 +36,49 @@ export function LoginEstudiante() {
       if (user?.role === 'student') {
         navigate('/student-portal', { replace: true });
       } else {
-        // Docente intentando entrar por la URL de estudiantes → redirigir al dashboard
         navigate('/dashboard', { replace: true });
       }
     }
   }, [status, user, navigate]);
+
+  // Si viene con parámetro role=teacher o role=docente, redirigir a /login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const roleParam = params.get('role');
+    if (roleParam === 'teacher' || roleParam === 'docente') {
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
+
+  // Consulta dinámica inteligente: detecta si la cuenta requiere clave inicial
+  useEffect(() => {
+    const trimmed = studentCedula.trim();
+    if (trimmed.length < 8) {
+      setIsInitialAccount(null);
+      setStudentFirstName(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/student-status?cedula=${encodeURIComponent(trimmed)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.exists) {
+            setIsInitialAccount(data.mustChangePassword);
+            setStudentFirstName(data.name || null);
+          } else {
+            setIsInitialAccount(null);
+            setStudentFirstName(null);
+          }
+        }
+      } catch (_) {
+        // Silencioso para no saturar la vista
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [studentCedula]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -45,106 +92,183 @@ export function LoginEstudiante() {
         setError('Esta entrada es exclusiva para estudiantes. El acceso docente se realiza en /login.');
       }
     } catch (err: any) {
-      setError(err?.message ?? 'Número de Cédula o DIMEX no encontrado en el sistema. Verificá que sea correcto.');
+      setError(err?.message ?? 'Número de Cédula o contraseña incorrectos. Verificá tus datos.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-slate-100 flex flex-col items-center justify-center px-4 py-8">
-      {/* Encabezado institucional */}
-      <div className="mb-6 text-center space-y-1">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-800 shadow-lg mb-3">
-          <GraduationCap className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-xl font-black text-slate-900 tracking-tight">Portal Estudiantil</h1>
-        <p className="text-xs text-slate-500 font-medium">CINDEA — Sistema Educativo MEP</p>
-      </div>
-
-      <div className="w-full max-w-sm bg-white rounded-3xl border border-emerald-200/80 shadow-xl shadow-emerald-950/5 p-6 sm:p-8 space-y-5">
-
-        {/* Encabezado del formulario */}
-        <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-800 flex items-center justify-center text-white shadow-sm shrink-0">
-            <BookOpen className="w-5 h-5" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/40 flex items-center justify-center px-4 py-8 sm:py-12 selection:bg-emerald-600 selection:text-white">
+      <div className="w-full max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+        
+        {/* ========================================================= */}
+        {/* COLUMNA IZQUIERDA: PORTADA / BIENVENIDA ESTUDIANTIL      */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+          {/* Badge institucional */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/80 border border-emerald-200/80 text-emerald-900 text-xs font-bold shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span>CINDEA • Departamento de Inglés • MEP</span>
           </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border bg-emerald-50 text-emerald-800 border-emerald-200">
-              Acceso con Cédula
-            </span>
-            <p className="text-[11px] text-slate-500 mt-0.5">Consulta tus notas, tareas y tutor de inglés</p>
-          </div>
-        </div>
 
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-
-        {/* Aviso de cédula */}
-        <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-3 flex items-start gap-2.5">
-          <CreditCard className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
-          <p className="text-xs text-emerald-950 leading-relaxed">
-            Ingresa con tu <strong>número de Cédula</strong> o <strong>DIMEX</strong> registrado en la matrícula oficial del CINDEA.
-          </p>
-        </div>
-
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <Input
-            label="Número de Cédula o DIMEX (Solo Números)"
-            placeholder="Ej. 501230456 o 155823491024"
-            value={studentCedula}
-            onChange={(e) => setStudentCedula(e.target.value.replace(/\D/g, ''))}
-            inputMode="numeric"
-            pattern="[0-9]*"
-            required
-            autoFocus
-          />
-
-          <Input
-            label="Contraseña o PIN de Estudiante"
-            type="password"
-            placeholder="••••••••"
-            value={studentPin}
-            onChange={(e) => setStudentPin(e.target.value)}
-            required
-          />
-
-          {/* Aviso clave inicial */}
-          <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-3 text-xs text-amber-950 space-y-1 shadow-2xs">
-            <div className="flex items-center gap-1.5 font-bold text-amber-900">
-              <KeyRound className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>¿Es tu primera vez ingresando?</span>
-            </div>
-            <p className="text-[11px] text-amber-900/90 leading-relaxed">
-              Tu clave inicial es{' '}
-              <strong className="font-mono font-bold bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 text-amber-950">
-                student123
-              </strong>
-              .
+          <div className="space-y-3">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-[1.15]">
+              Portal Estudiantil &amp; <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-700">
+                Aula Virtual en la Nube
+              </span>
+            </h1>
+            <p className="text-sm sm:text-base text-slate-600 font-normal leading-relaxed max-w-xl mx-auto lg:mx-0">
+              Accede a tu información académica oficial, revisa tus notas ponderadas en tiempo real, entrega tus asignaciones y practica inglés con tu tutor de IA.
             </p>
           </div>
 
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="w-full font-bold bg-emerald-700 hover:bg-emerald-800 text-xs py-3 rounded-xl shadow-sm"
-          >
-            {submitting ? 'Verificando en la Nube...' : 'Ingresar a mi Portal CINDEA'}
-            <ArrowRight className="w-4 h-4 ml-1.5" />
-          </Button>
-        </form>
+          {/* 3 Pilares del Estudiante */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 text-left">
+            <div className="bg-white/80 backdrop-blur-xs border border-emerald-100/90 rounded-2xl p-4 shadow-2xs space-y-1.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <Award className="w-4 h-4" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-900">Notas en Tiempo Real</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Desglose oficial MEP: Cotidiano 50%, Pruebas 30%, Tareas 10%.
+              </p>
+            </div>
 
-        {/* Pie de página */}
-        <p className="text-center text-[10px] text-slate-400 pt-2">
-          ¿Sos docente?{' '}
-          <Link to="/login" className="text-blue-600 font-bold hover:underline">
-            Acceso docente aquí
-          </Link>
-        </p>
+            <div className="bg-white/80 backdrop-blur-xs border border-emerald-100/90 rounded-2xl p-4 shadow-2xs space-y-1.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <FileCheck2 className="w-4 h-4" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-900">Tareas &amp; Justificaciones</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Sube múltiples fotos, audios o documentos a Google Drive.
+              </p>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-xs border border-emerald-100/90 rounded-2xl p-4 shadow-2xs space-y-1.5">
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <Bot className="w-4 h-4" />
+              </div>
+              <h3 className="text-xs font-bold text-slate-900">Tutor de Inglés con IA</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Práctica guiada de gramática y speaking disponible 24/7.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================= */}
+        {/* COLUMNA DERECHA: FORMULARIO MINIMALISTA DE ACCESO        */}
+        {/* ========================================================= */}
+        <div className="lg:col-span-5 w-full max-w-md mx-auto">
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xl shadow-slate-950/5 p-6 sm:p-8 space-y-5">
+            {/* Cabecera del formulario */}
+            <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20 shrink-0">
+                <GraduationCap className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900 tracking-tight">Ingreso de Estudiantes</h2>
+                <p className="text-xs text-slate-500">Usa tu identificación oficial</p>
+              </div>
+            </div>
+
+            {error && <ErrorMessage>{error}</ErrorMessage>}
+
+            <form className="space-y-4" onSubmit={onSubmit}>
+              {/* Campo Cédula */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="cedula-input" className="text-xs font-bold text-slate-700">
+                    Número de Cédula o DIMEX
+                  </label>
+                  {studentFirstName && (
+                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      Hola, {studentFirstName}
+                    </span>
+                  )}
+                </div>
+                <input
+                  id="cedula-input"
+                  type="text"
+                  placeholder="Ej. 501230456"
+                  value={studentCedula}
+                  onChange={(e) => setStudentCedula(e.target.value.replace(/\D/g, ''))}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  required
+                  autoFocus
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none transition"
+                />
+              </div>
+
+              {/* Campo Contraseña */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="pin-input" className="text-xs font-bold text-slate-700">
+                    Contraseña / PIN
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowManualHelp(!showManualHelp)}
+                    className="text-[11px] font-semibold text-slate-400 hover:text-emerald-700 transition"
+                  >
+                    ¿Primera vez?
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <input
+                    id="pin-input"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={studentPin}
+                    onChange={(e) => setStudentPin(e.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-emerald-600 focus:outline-none pr-10 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {/* Hint inteligente de primera vez */}
+                {(isInitialAccount === true || showManualHelp) && (
+                  <div className="pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-50/90 border border-amber-200/80 px-2.5 py-1.5 rounded-lg">
+                      <KeyRound className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>
+                        Clave inicial: <strong className="font-mono font-bold bg-amber-100 px-1 py-0.2 rounded text-amber-950">student123</strong>
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full font-bold bg-emerald-600 hover:bg-emerald-700 text-xs py-3 rounded-xl shadow-xs text-white transition mt-2 flex items-center justify-center gap-1.5"
+              >
+                {submitting ? 'Verificando...' : 'Ingresar al Portal'}
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </form>
+
+            <p className="pt-1 text-[10px] text-slate-400 text-center font-medium">
+              Ministerio de Educación Pública de Costa Rica
+            </p>
+          </div>
+        </div>
+
       </div>
-
-      <p className="mt-6 text-[10px] text-slate-400 text-center">
-        Sistema de Gestión Académica MEP · CINDEA
-      </p>
     </div>
   );
 }

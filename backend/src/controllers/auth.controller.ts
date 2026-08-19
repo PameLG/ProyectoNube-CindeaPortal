@@ -86,6 +86,31 @@ export const authController = {
     }
   },
 
+  async getStudentStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const cedula = typeof req.query.cedula === 'string' ? req.query.cedula.trim() : '';
+      if (!cedula) {
+        return res.json({ exists: false, mustChangePassword: true });
+      }
+      const { studentQueries } = await import('../database/queries/students');
+      const studentRes = await studentQueries.findByCedulaOrStudentNumber(cedula);
+      const student = studentRes.rows[0];
+      if (!student) {
+        return res.json({ exists: false, mustChangePassword: true });
+      }
+      const userRes = await userQueries.findById(student.user_id);
+      const user = userRes.rows[0];
+      const mustChange = user ? (user.must_change_password ?? true) : true;
+      res.json({
+        exists: true,
+        mustChangePassword: mustChange,
+        name: student.full_name ? student.full_name.split(' ')[0] : undefined,
+      });
+    } catch (e) {
+      next(e);
+    }
+  },
+
   async changePassword(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       if (!req.user) {

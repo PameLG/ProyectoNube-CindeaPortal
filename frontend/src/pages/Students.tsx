@@ -86,6 +86,64 @@ export function Students() {
     return undefined;
   };
 
+  const downloadExcelTemplate = () => {
+    const sampleEstudiantes = [
+      {
+        'Cédula / DIMEX': '504540188',
+        'Nombre Completo': 'Pamela Leiva Gómez',
+        'Nivel / Módulo': 'Inglés 10° Año (Módulo IV)',
+        'Teléfono / Contacto': '8899-7711',
+      },
+      {
+        'Cédula / DIMEX': '118230491',
+        'Nombre Completo': 'Alejandro José Mora Solís',
+        'Nivel / Módulo': 'Inglés 10° Año (Módulo IV)',
+        'Teléfono / Contacto': '8745-1290',
+      },
+      {
+        'Cédula / DIMEX': '207450123',
+        'Nombre Completo': 'María Fernanda Rodríguez Céspedes',
+        'Nivel / Módulo': 'Inglés 10° Año (Módulo IV)',
+        'Teléfono / Contacto': '8321-4567',
+      },
+      {
+        'Cédula / DIMEX': '109820341',
+        'Nombre Completo': 'Carlos Alberto Núñez Quesada',
+        'Nivel / Módulo': 'Inglés 11° Año (Módulo V / Bachillerato)',
+        'Teléfono / Contacto': '8901-2345',
+      },
+      {
+        'Cédula / DIMEX': '503210987',
+        'Nombre Completo': 'Sofía Elena Vargas Peñaranda',
+        'Nivel / Módulo': 'Inglés 11° Año (Módulo V / Bachillerato)',
+        'Teléfono / Contacto': '8654-7890',
+      },
+      {
+        'Cédula / DIMEX': '304560789',
+        'Nombre Completo': 'Esteban Josué Brenes Chacón',
+        'Nivel / Módulo': 'Inglés 9° Año (Módulo III)',
+        'Teléfono / Contacto': '8432-1098',
+      },
+      {
+        'Cédula / DIMEX': '112340567',
+        'Nombre Completo': 'Valeria Michelle Jiménez Zúñiga',
+        'Nivel / Módulo': 'Inglés 9° Año (Módulo III)',
+        'Teléfono / Contacto': '8765-4321',
+      },
+      {
+        'Cédula / DIMEX': '602340891',
+        'Nombre Completo': 'Andrés Felipe Muñoz Barquero',
+        'Nivel / Módulo': 'Inglés 7° y 8° Año (Módulos I y II)',
+        'Teléfono / Contacto': '8512-3456',
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleEstudiantes);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes CINDEA');
+    XLSX.writeFile(wb, 'Plantilla_Estudiantes_CINDEA.xlsx');
+  };
+
   const loadData = () => {
     setLoading(true);
     Promise.all([studentsService.list(), coursesService.list()])
@@ -756,9 +814,20 @@ export function Students() {
 
           {/* Dropzone para cargar archivo Excel con Drag & Drop real */}
           <div>
-            <label className="block font-bold text-slate-700 mb-1.5">
-              Archivo Excel (.xlsx, .xls, .csv):
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block font-bold text-slate-700 text-xs">
+                Archivo Excel (.xlsx, .xls, .csv):
+              </label>
+              <button
+                type="button"
+                onClick={downloadExcelTemplate}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-lg transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                title="Descargar archivo Excel de ejemplo sin correo"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                <span>📥 Descargar Plantilla Excel</span>
+              </button>
+            </div>
             <label
               onDragOver={(e) => {
                 e.preventDefault();
