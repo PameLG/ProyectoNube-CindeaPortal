@@ -57,14 +57,14 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
         parts.push(
           <strong
             key={keyIdx++}
-            className="font-bold text-slate-900 dark:text-white"
+            className="font-bold text-slate-950"
           >
             {first.content}
           </strong>
         );
       } else if (first.type === 'italic') {
         parts.push(
-          <em key={keyIdx++} className="italic text-slate-700 dark:text-slate-200">
+          <em key={keyIdx++} className="italic text-slate-700">
             {first.content}
           </em>
         );
@@ -72,7 +72,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
         parts.push(
           <code
             key={keyIdx++}
-            className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] border border-slate-200 dark:border-slate-700 font-semibold"
+            className="px-1.5 py-0.5 rounded-md bg-slate-100 text-indigo-700 font-mono text-[11px] border border-slate-200 font-semibold"
           >
             {first.content}
           </code>
@@ -95,8 +95,8 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
         elements.push(
           <ul key={`list-${blockKey++}`} className="space-y-1.5 my-2 pl-1">
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-slate-800 dark:text-slate-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 mt-2 shrink-0" />
+              <li key={idx} className="flex items-start gap-2 text-slate-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0" />
                 <span className="flex-1 leading-relaxed">{item}</span>
               </li>
             ))}
@@ -106,8 +106,8 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
         elements.push(
           <ol key={`list-${blockKey++}`} className="space-y-1.5 my-2 pl-1">
             {currentList.items.map((item, idx) => (
-              <li key={idx} className="flex items-start gap-2.5 text-slate-800 dark:text-slate-100">
-                <span className="w-5 h-5 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 border border-indigo-200 dark:border-indigo-800">
+              <li key={idx} className="flex items-start gap-2.5 text-slate-800">
+                <span className="w-5 h-5 rounded-lg bg-indigo-100 text-indigo-700 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5 border border-indigo-200">
                   {idx + 1}
                 </span>
                 <span className="flex-1 leading-relaxed">{item}</span>
@@ -133,7 +133,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
     if (trimmed.startsWith('### ')) {
       flushList();
       elements.push(
-        <h4 key={blockKey++} className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm mt-3 mb-1 flex items-center gap-1.5">
+        <h4 key={blockKey++} className="font-bold text-slate-900 text-xs sm:text-sm mt-3 mb-1 flex items-center gap-1.5">
           <span className="w-1 h-3.5 bg-indigo-500 rounded-full" />
           <span>{renderInline(trimmed.replace(/^###\s+/, ''))}</span>
         </h4>
@@ -143,7 +143,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
     if (trimmed.startsWith('## ') || trimmed.startsWith('# ')) {
       flushList();
       elements.push(
-        <h3 key={blockKey++} className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base mt-3 mb-1.5">
+        <h3 key={blockKey++} className="font-extrabold text-slate-900 text-sm sm:text-base mt-3 mb-1.5">
           {renderInline(trimmed.replace(/^#+\s+/, ''))}
         </h3>
       );
@@ -178,7 +178,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
       elements.push(
         <div
           key={blockKey++}
-          className="p-3 my-2 bg-indigo-50/70 dark:bg-indigo-950/40 border-l-4 border-indigo-500 rounded-r-xl text-slate-700 dark:text-slate-200 text-xs italic"
+          className="p-3 my-2 bg-indigo-50/70 border-l-4 border-indigo-500 rounded-r-xl text-slate-700 text-xs italic"
         >
           {renderInline(trimmed.replace(/^>\s+/, ''))}
         </div>
@@ -189,7 +189,7 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
     // 5. Párrafo Normal
     flushList();
     elements.push(
-      <p key={blockKey++} className="leading-relaxed my-1.5 text-slate-800 dark:text-slate-100">
+      <p key={blockKey++} className="leading-relaxed my-1.5 text-slate-800">
         {renderInline(trimmed)}
       </p>
     );
@@ -197,5 +197,5 @@ export function FormattedMessage({ content, className = '' }: FormattedMessagePr
 
   flushList();
 
-  return <div className={`space-y-1 text-xs font-normal ${className}`}>{elements}</div>;
+  return <div className={`space-y-1 text-xs font-normal text-slate-800 ${className}`}>{elements}</div>;
 }
