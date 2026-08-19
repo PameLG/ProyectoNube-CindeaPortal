@@ -238,7 +238,24 @@
   "submissions": [],
   "grades": [],
   "attendance": [],
-  "announcements": [],
+  "announcements": [
+    {
+      "id": "ann-1",
+      "title": "📢 Inicio de Lecciones - Módulos de Inglés CINDEA 2026",
+      "content": "Estimados estudiantes, les recordamos que el horario de clases nocturnas inicia puntualmente a las 6:00 PM. Por favor consultar su guía de trabajo y materiales en el portal estudiantil.",
+      "author": "Teacher Diana",
+      "pinned": true,
+      "created_at": "2026-08-17T19:56:47.217Z"
+    },
+    {
+      "id": "ann-2",
+      "title": "ℹ️ Protocolo de Justificación de Ausencias CCSS",
+      "content": "Se recuerda que disponen de 3 días hábiles posteriores a la reincorporación para adjuntar su comprobante médico de la CCSS a través de la sección de Justificaciones del portal.",
+      "author": "Teacher Diana",
+      "pinned": false,
+      "created_at": "2026-08-18T19:56:47.218Z"
+    }
+  ],
   "files": [],
   "refresh_tokens": [
     {
@@ -1731,5 +1748,38 @@
     }
   ],
   "justifications": [],
-  "teacher_documents": []
+  "teacher_documents": [
+    {
+      "id": "doc-plan-1",
+      "teacher_id": "22222222-2222-4222-a222-222222222222",
+      "title": "Planeamiento Didáctico Oficial - Unit 1: Personal Identity & Daily Interactions",
+      "type": "planeamiento",
+      "course_name": "Inglés 10° Año (Módulo IV)",
+      "period": "I Periodo 2026",
+      "unit": "Unit 1",
+      "status": "aprobado",
+      "data": {
+        "unitName": "Unit 1: Personal Identity & Daily Interactions",
+        "learningOutcomes": [
+          "Recognize basic personal information and daily greetings in oral and written English.",
+          "Exchange simple personal information about routines, occupations and hobbies using target vocabulary."
+        ],
+        "rubrics": [
+          {
+            "criteria": "Oral Presentation Fluency",
+            "level1": "Incipiente",
+            "level2": "Intermedio",
+            "level3": "Avanzado"
+          },
+          {
+            "criteria": "Grammar Accuracy & Vocabulary Use",
+            "level1": "Requiere apoyo",
+            "level2": "Adecuado",
+            "level3": "Excelente"
+          }
+        ]
+      },
+      "created_at": "2026-08-19T19:56:47.218Z"
+    }
+  ]
 }
