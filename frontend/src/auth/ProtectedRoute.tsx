@@ -1,4 +1,4 @@
-﻿import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import type { ReactNode } from 'react';
 import { Loading } from '../components/Loading';
@@ -9,7 +9,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (status === 'loading') return <Loading />;
   if (status === 'unauthenticated') {
-    return <Navigate to="/login" replace state={{ from: location }} />;
+    const isStudentRoute = location.pathname.startsWith('/student-portal');
+    return <Navigate to={isStudentRoute ? '/login?role=student' : '/login?role=teacher'} replace state={{ from: location }} />;
   }
   return <>{children}</>;
 }

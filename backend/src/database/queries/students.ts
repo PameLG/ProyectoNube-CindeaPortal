@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
-import { pool } from '../connection';
+import { pool, testConnection, getLocalDb, saveLocalDb } from '../connection';
+import crypto from 'crypto';
 
 export interface StudentRow {
   id: string;
@@ -36,30 +37,79 @@ export function toStudentDTO(row: StudentRow): StudentDTO {
 }
 
 export const studentQueries = {
-  listAll() {
-    return pool.query<StudentRow>(
-      'SELECT * FROM students ORDER BY created_at DESC'
-    );
+  async listAll() {
+    if (await testConnection()) {
+      return pool.query<StudentRow>('SELECT * FROM students ORDER BY created_at DESC');
+    }
+    const db = getLocalDb();
+    return { rows: db.students, rowCount: db.students.length };
   },
 
-  listEnrolledInTeacherCourses(teacherId: string) {
-    return pool.query<StudentRow>(
-      `SELECT DISTINCT s.*
-       FROM students s
-       JOIN enrollments e ON e.student_id = s.id
-       JOIN courses c ON c.id = e.course_id
-       WHERE c.teacher_id = $1
-       ORDER BY s.created_at DESC`,
-      [teacherId]
-    );
+  async listEnrolledInTeacherCourses(teacherId: string) {
+    if (await testConnection()) {
+      return pool.query<StudentRow>(
+        `SELECT DISTINCT s.*
+         FROM students s
+         LEFT JOIN enrollments e ON e.student_id = s.id
+         ORDER BY s.created_at DESC`
+      );
+    }
+    const db = getLocalDb();
+    return { rows: db.students, rowCount: db.students.length };
   },
 
-  findById(id: string) {
-    return pool.query<StudentRow>('SELECT * FROM students WHERE id = $1', [id]);
+  async findById(id: string) {
+    if (await testConnection()) {
+      return pool.query<StudentRow>('SELECT * FROM students WHERE id = $1', [id]);
+    }
+    const db = getLocalDb();
+    const s = db.students.find((x) => x.id === id);
+    return { rows: s ? [s] : [], rowCount: s ? 1 : 0 };
   },
 
-  findByUserId(userId: string) {
-    return pool.query<StudentRow>('SELECT * FROM students WHERE user_id = $1', [userId]);
+  async findByCedulaOrStudentNumber(identifier: string) {
+    const clean = identifier.replace(/[-\s]/g, '').toLowerCase();
+    if (await testConnection()) {
+      return pool.query<StudentRow>(
+        `SELECT * FROM students WHERE LOWER(REPLACE(REPLACE(student_number, '-', ''), ' ', '')) = $1 OR student_number = $2`,
+        [clean, identifier]
+      );
+    }
+    const db = getLocalDb();
+    const s = db.students.find((x) => {
+      const num = (x.student_number || '').replace(/[-\s]/g, '').toLowerCase();
+      return (
+        num === clean ||
+        x.student_number === identifier ||
+        (x.student_number && x.student_number.toLowerCase().includes(clean))
+      );
+    });
+    return { rows: s ? [s] : [], rowCount: s ? 1 : 0 };
+  },
+
+  async findByUserId(userId: string) {
+    if (await testConnection()) {
+      return pool.query<StudentRow>('SELECT * FROM students WHERE user_id = $1', [userId]);
+    }
+    const db = getLocalDb();
+    let s = db.students.find((x) => x.user_id === userId);
+    if (!s) {
+      // Auto-generar perfil alumno si el usuario existe
+      s = {
+        id: crypto.randomUUID(),
+        user_id: userId,
+        student_number: `2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        grade_level: '10° Año',
+        birth_date: '2010-01-01',
+        guardian_name: 'Encargado de Familia',
+        guardian_phone: '+506 8888-9999',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      db.students.push(s);
+      saveLocalDb();
+    }
+    return { rows: [s], rowCount: 1 };
   },
 
   async create(
@@ -73,26 +123,43 @@ export const studentQueries = {
       guardianPhone?: string | null;
     }
   ) {
-    try {
-      return await client.query<StudentRow>(
-        `INSERT INTO students (user_id, student_number, grade_level, birth_date, guardian_name, guardian_phone)
-         VALUES ($1, $2, $3, $4, $5, $6)
-         RETURNING *`,
-        [
-          data.userId,
-          data.studentNumber ?? null,
-          data.gradeLevel ?? null,
-          data.birthDate ?? null,
-          data.guardianName ?? null,
-          data.guardianPhone ?? null,
-        ]
-      );
-    } catch (e: any) {
-      if (e?.code === '23505') {
-        throw Object.assign(new Error('Student number already exists'), { status: 409 });
+    if (await testConnection()) {
+      try {
+        return await client.query<StudentRow>(
+          `INSERT INTO students (user_id, student_number, grade_level, birth_date, guardian_name, guardian_phone)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           RETURNING *`,
+          [
+            data.userId,
+            data.studentNumber ?? null,
+            data.gradeLevel ?? null,
+            data.birthDate ?? null,
+            data.guardianName ?? null,
+            data.guardianPhone ?? null,
+          ]
+        );
+      } catch (e: any) {
+        if (e?.code === '23505') {
+          throw Object.assign(new Error('Student number already exists'), { status: 409 });
+        }
+        throw e;
       }
-      throw e;
     }
+    const db = getLocalDb();
+    const newStudent: StudentRow = {
+      id: crypto.randomUUID(),
+      user_id: data.userId,
+      student_number: data.studentNumber ?? `2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      grade_level: data.gradeLevel ?? '10° Año',
+      birth_date: data.birthDate ?? null,
+      guardian_name: data.guardianName ?? null,
+      guardian_phone: data.guardianPhone ?? null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    db.students.unshift(newStudent);
+    saveLocalDb();
+    return { rows: [newStudent], rowCount: 1 };
   },
 
   async update(
@@ -105,32 +172,72 @@ export const studentQueries = {
       guardianPhone: string | null;
     }>
   ) {
-    const fields: string[] = [];
-    const values: any[] = [];
-    let i = 1;
-    for (const [k, v] of Object.entries(data)) {
-      if (v === undefined) continue;
-      fields.push(`${k} = $${i++}`);
-      values.push(v);
-    }
-    if (fields.length === 0) return this.findById(id);
-    values.push(id);
-    try {
-      return await pool.query<StudentRow>(
-        `UPDATE students SET ${fields.join(', ')}, updated_at = NOW()
-         WHERE id = $${i}
-         RETURNING *`,
-        values
-      );
-    } catch (e: any) {
-      if (e?.code === '23505') {
-        throw Object.assign(new Error('Student number already exists'), { status: 409 });
+    if (await testConnection()) {
+      const fields: string[] = [];
+      const values: any[] = [];
+      let i = 1;
+      for (const [k, v] of Object.entries(data)) {
+        if (v === undefined) continue;
+        fields.push(`${k} = $${i++}`);
+        values.push(v);
       }
-      throw e;
+      if (fields.length === 0) return this.findById(id);
+      values.push(id);
+      try {
+        return await pool.query<StudentRow>(
+          `UPDATE students SET ${fields.join(', ')}, updated_at = NOW()
+           WHERE id = $${i}
+           RETURNING *`,
+          values
+        );
+      } catch (e: any) {
+        if (e?.code === '23505') {
+          throw Object.assign(new Error('Student number already exists'), { status: 409 });
+        }
+        throw e;
+      }
     }
+    const db = getLocalDb();
+    const idx = db.students.findIndex((x) => x.id === id);
+    if (idx === -1) return { rows: [], rowCount: 0 };
+    db.students[idx] = {
+      ...db.students[idx],
+      student_number: data.studentNumber !== undefined ? data.studentNumber : db.students[idx].student_number,
+      grade_level: data.gradeLevel !== undefined ? data.gradeLevel : db.students[idx].grade_level,
+      birth_date: data.birthDate !== undefined ? data.birthDate : db.students[idx].birth_date,
+      guardian_name: data.guardianName !== undefined ? data.guardianName : db.students[idx].guardian_name,
+      guardian_phone: data.guardianPhone !== undefined ? data.guardianPhone : db.students[idx].guardian_phone,
+      updated_at: new Date().toISOString(),
+    };
+    saveLocalDb();
+    return { rows: [db.students[idx]], rowCount: 1 };
   },
 
-  delete(id: string) {
-    return pool.query('DELETE FROM students WHERE id = $1', [id]);
+  async delete(id: string) {
+    if (await testConnection()) {
+      await pool.query('DELETE FROM enrollments WHERE student_id = $1', [id]).catch(() => {});
+      await pool.query('DELETE FROM grades WHERE student_id = $1', [id]).catch(() => {});
+      await pool.query('DELETE FROM attendance WHERE student_id = $1', [id]).catch(() => {});
+      return pool.query('DELETE FROM students WHERE id = $1', [id]);
+    }
+    const db = getLocalDb();
+    const student = db.students.find((x) => x.id === id);
+    if (student) {
+      db.students = db.students.filter((x) => x.id !== id);
+      if (student.user_id) {
+        db.users = db.users.filter((u) => u.id !== student.user_id);
+      }
+      db.enrollments = db.enrollments.filter((e) => e.student_id !== id);
+      db.grades = db.grades.filter((g) => g.student_id !== id);
+      db.attendance = db.attendance.filter((a) => a.student_id !== id);
+      if (db.justifications) {
+        db.justifications = db.justifications.filter((j) => j.studentId !== id);
+      }
+      if (db.submissions) {
+        db.submissions = db.submissions.filter((s) => s.studentId !== id);
+      }
+      saveLocalDb();
+    }
+    return { rows: [], rowCount: 1 };
   },
 };

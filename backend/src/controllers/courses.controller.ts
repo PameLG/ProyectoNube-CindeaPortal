@@ -17,6 +17,27 @@ const updateSchema = createSchema.partial();
 export const coursesController = {
   async list(req: AuthRequest, res: Response, next: NextFunction) {
     try {
+      if (req.user?.role === 'student') {
+        const { studentQueries } = await import('../database/queries/students');
+        const { enrollmentQueries } = await import('../database/queries/enrollments');
+        const studentRes = await studentQueries.findByUserId(req.user.id);
+        const student = studentRes.rows[0];
+        if (student) {
+          const enrolledRes = await enrollmentQueries.listCoursesByStudent(student.id);
+          if (enrolledRes.rows.length > 0) {
+            return res.json({ courses: enrolledRes.rows.map(toCourseDTO) });
+          }
+          // Si no tiene enrollment explícito, filtrar por su grade_level
+          const allCourses = await courseQueries.listAll();
+          const matched = allCourses.rows.filter((c) =>
+            student.grade_level && (c.name.includes(student.grade_level) || student.grade_level.includes(c.name))
+          );
+          if (matched.length > 0) {
+            return res.json({ courses: matched.map(toCourseDTO) });
+          }
+        }
+      }
+
       const teacherId = await getTeacherId(req.user!.id);
       const result = await courseQueries.listByTeacher(teacherId);
       res.json({ courses: result.rows.map(toCourseDTO) });

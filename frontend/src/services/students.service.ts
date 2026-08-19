@@ -1,4 +1,4 @@
-﻿import { api } from './api';
+import { api } from './api';
 import type { Student } from '../types';
 
 export const studentsService = {
@@ -11,15 +11,23 @@ export const studentsService = {
     return data.student;
   },
   async create(payload: {
-    email: string;
-    password: string;
     fullName: string;
-    studentNumber?: string;
+    studentNumber: string;
+    email?: string;
+    password?: string;
     gradeLevel?: string;
     guardianName?: string;
     guardianPhone?: string;
+    courseId?: string;
   }): Promise<{ student: Student }> {
     const { data } = await api.post<{ student: Student }>('/students', payload);
+    return data;
+  },
+  async createBatch(payload: {
+    students: { fullName: string; studentNumber: string; email?: string; gradeLevel?: string }[];
+    courseId?: string;
+  }): Promise<{ createdCount: number; message: string }> {
+    const { data } = await api.post<{ createdCount: number; message: string }>('/students/batch', payload);
     return data;
   },
   async update(id: string, payload: Partial<Student>): Promise<Student> {

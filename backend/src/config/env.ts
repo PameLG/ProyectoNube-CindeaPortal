@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config(); // fallback to cwd
 
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
@@ -39,4 +43,12 @@ export const env = {
     accessKey: process.env.STORAGE_ACCESS_KEY ?? '',
     secretKey: process.env.STORAGE_SECRET_KEY ?? '',
   },
+
+  teacherAllowedEmails: (
+    process.env.AUTHORIZED_TEACHER_EMAILS ||
+    'pruebaproyecto551@gmail.com,teacher.diana@gmail.com,diana@mep.go.cr,profesoradiana@gmail.com'
+  )
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
 };

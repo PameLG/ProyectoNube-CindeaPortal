@@ -1,4 +1,4 @@
-﻿import {
+import {
   createContext,
   useCallback,
   useContext,
@@ -16,15 +16,17 @@ export interface User {
   fullName: string;
   role: UserRole;
   avatarUrl: string | null;
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextValue {
   user: User | null;
   status: 'loading' | 'authenticated' | 'unauthenticated';
-  login: (email: string, password: string) => Promise<void>;
-  loginWithMicrosoft: () => void;
-  loginWithGoogle: () => void;
+  login: (identifier: string, password?: string) => Promise<User>;
+  loginWithMicrosoft: (email?: string) => void;
+  loginWithGoogle: (email?: string) => void;
   register: (email: string, password: string, fullName: string) => Promise<void>;
+  updateUser: (user: User) => void;
   logout: () => Promise<void>;
 }
 
@@ -98,20 +100,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (identifier: string, password?: string): Promise<User> => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, email: identifier, password: password || '' }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error ?? 'Login failed');
+      throw new Error(err.error ?? 'Credenciales incorrectas');
     }
     const data = await res.json();
     setTokens(data.accessToken, data.refreshToken);
     setUser(data.user);
     setStatus('authenticated');
+    return data.user;
   }, []);
 
   const register = useCallback(
@@ -133,12 +136,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const loginWithMicrosoft = useCallback(() => {
-    window.location.href = '/api/integrations/microsoft/login';
+  const loginWithMicrosoft = useCallback((email?: string) => {
+    const params = new URLSearchParams();
+    if (email) params.set('email', email);
+    window.location.href = `/api/integrations/microsoft/login?${params.toString()}`;
   }, []);
 
-  const loginWithGoogle = useCallback(() => {
-    window.location.href = '/api/integrations/google/login';
+  const loginWithGoogle = useCallback((email?: string) => {
+    const params = new URLSearchParams();
+    if (email) params.set('email', email);
+    window.location.href = `/api/integrations/google/login?${params.toString()}`;
   }, []);
 
   const logout = useCallback(async () => {
@@ -159,6 +166,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('unauthenticated');
   }, []);
 
+  const updateUser = useCallback((updated: User) => {
+    setUser(updated);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -167,9 +178,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       loginWithMicrosoft,
       loginWithGoogle,
+      updateUser,
       logout,
     }),
-    [user, status, login, register, loginWithMicrosoft, loginWithGoogle, logout]
+    [user, status, login, register, loginWithMicrosoft, loginWithGoogle, updateUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

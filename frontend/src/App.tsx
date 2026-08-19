@@ -1,4 +1,4 @@
-﻿import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
@@ -13,7 +13,14 @@ import { Courses } from './pages/Courses';
 import { CourseDetail } from './pages/CourseDetail';
 import { Grades } from './pages/Grades';
 import { Attendance } from './pages/Attendance';
+import { Assignments } from './pages/Assignments';
+import { Announcements } from './pages/Announcements';
+import { AIAssistant } from './pages/AIAssistant';
+import { Planning } from './pages/Planning';
+import { GoogleCalendarPage } from './pages/GoogleCalendarPage';
+import { StudentPortal } from './pages/StudentPortal';
 import { Loading } from './components/Loading';
+import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 
 function OAuthCallback() {
   const { status } = useAuth();
@@ -29,6 +36,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ForcePasswordChangeModal />
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
@@ -36,6 +44,17 @@ export default function App() {
             <Route path="/register" element={<Register />} />
           </Route>
 
+          {/* Portal del Estudiante (Protegido con Cédula/PIN) */}
+          <Route
+            path="/student-portal"
+            element={
+              <ProtectedRoute>
+                <StudentPortal />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Panel Administrativo y Docente (Protegido con JWT) */}
           <Route
             element={
               <ProtectedRoute>
@@ -44,14 +63,19 @@ export default function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/students" element={<Students />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/grades" element={<Grades />} />
+            <Route path="/assignments" element={<Assignments />} />
+            <Route path="/calendar" element={<GoogleCalendarPage />} />
+            <Route path="/planning" element={<Planning />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/courses/:id" element={<CourseDetail />} />
-            <Route path="/grades" element={<Grades />} />
-            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/students" element={<Students />} />
           </Route>
 
-          {/* Rutas de callback OAuth: AuthProvider procesa tokens y redirige */}
+          {/* Callbacks OAuth Google / Microsoft */}
           <Route path="/auth/microsoft/callback" element={<OAuthCallback />} />
           <Route path="/auth/google/callback" element={<OAuthCallback />} />
 

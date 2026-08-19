@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
@@ -54,7 +54,7 @@ export function Register() {
             type="button"
             variant="secondary"
             className="w-full"
-            onClick={loginWithMicrosoft}
+            onClick={() => loginWithMicrosoft()}
           >
             Registrarse con Microsoft
           </Button>
@@ -62,7 +62,7 @@ export function Register() {
             type="button"
             variant="secondary"
             className="w-full"
-            onClick={loginWithGoogle}
+            onClick={() => loginWithGoogle()}
           >
             Registrarse con Google
           </Button>

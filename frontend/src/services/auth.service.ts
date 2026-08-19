@@ -1,4 +1,4 @@
-﻿import { api } from './api';
+import { api } from './api';
 import type { AuthResponse, User } from '../types';
 
 export const authService = {
@@ -23,5 +23,10 @@ export const authService = {
 
   async logout(refreshToken: string | null): Promise<void> {
     await api.post('/auth/logout', refreshToken ? { refreshToken } : {});
+  },
+
+  async changePassword(newPassword: string): Promise<{ message: string; user: User }> {
+    const { data } = await api.post<{ message: string; user: User }>('/auth/change-password', { newPassword });
+    return data;
   },
 };

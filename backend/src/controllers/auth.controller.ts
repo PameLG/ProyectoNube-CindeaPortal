@@ -5,6 +5,7 @@ import {
   loginWithPassword,
   rotateRefreshToken,
   logoutWithRefreshToken,
+  changeUserPassword,
 } from '../services/auth.service';
 import { userQueries, toPublicUser } from '../database/queries/users';
 import type { AuthRequest } from '../middleware/auth.middleware';
@@ -16,8 +17,10 @@ const registerSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: z.string().optional(),
+  cedula: z.string().optional(),
+  identifier: z.string().optional(),
+  password: z.string().optional().default(''),
 });
 
 const refreshSchema = z.object({
@@ -38,7 +41,11 @@ export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try {
       const data = loginSchema.parse(req.body);
-      const result = await loginWithPassword(data.email, data.password);
+      const targetId = data.identifier || data.cedula || data.email;
+      if (!targetId) {
+        return res.status(400).json({ error: 'Debes ingresar tu correo institucional o número de Cédula/DIMEX' });
+      }
+      const result = await loginWithPassword(targetId, data.password);
       res.json(result);
     } catch (e) {
       next(e);
@@ -74,6 +81,22 @@ export const authController = {
         return res.json({ user: null });
       }
       res.json({ user: toPublicUser(user) });
+    } catch (e) {
+      next(e);
+    }
+  },
+
+  async changePassword(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'No autenticado' });
+      }
+      const { newPassword } = req.body;
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.trim().length < 6) {
+        return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres' });
+      }
+      const result = await changeUserPassword(req.user.id, newPassword);
+      res.json({ message: 'Contraseña actualizada con éxito', user: result.user });
     } catch (e) {
       next(e);
     }

@@ -1,3 +1,106 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  /* Configuración de página institucional MEP */
+  @page {
+    size: letter landscape;
+    margin: 10mm 12mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Times New Roman', Times, serif, system-ui, -apple-system, sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar navegación, barra lateral, botones y overlays */
+  header,
+  aside,
+  nav,
+  button,
+  .no-print,
+  select,
+  input,
+  textarea {
+    display: none !important;
+  }
+
+  /* Anular contenedores fijos y sombras de modales para impresión limpia */
+  .fixed,
+  .fixed.inset-0,
+  [role="dialog"] {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Ocultar encabezados y pies de modales */
+  .border-b.border-slate-100,
+  .border-t.border-slate-100 {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  .mep-official-sheet {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .mep-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 10px !important;
+  }
+
+  .mep-table th, 
+  .mep-table td {
+    border: 1px solid #000000 !important;
+    padding: 5px 7px !important;
+    font-size: 9pt !important;
+    color: #000000 !important;
+  }
+
+  .mep-table th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    text-align: center !important;
+  }
+}

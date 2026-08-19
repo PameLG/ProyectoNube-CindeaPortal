@@ -27,6 +27,7 @@ export async function getMicrosoftAuthUrl(): Promise<string> {
   return msalClient.getAuthCodeUrl({
     scopes,
     redirectUri: env.microsoft.redirectUri,
+    prompt: 'select_account',
   });
 }
 

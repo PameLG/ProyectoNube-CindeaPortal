@@ -29,3 +29,13 @@ coverage/
 
 # Docker
 .docker/
+
+# Secrets & Local tokens
+google_tokens.json
+**/google_tokens.json
+
+# Build cache & temp scripts
+*.tsbuildinfo
+backend/test_*.js
+backend/clean_*.js
+backend/organize_*.js

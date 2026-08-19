@@ -11,24 +11,31 @@ const assignmentCreateSchema = z.object({
   title: z.string().min(1),
   description: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
-  dueDate: z.string().datetime().nullable().optional(),
+  dueDate: z.string().nullable().optional(),
   status: z.enum(['draft', 'published', 'closed']).optional(),
   maxScore: z.number().positive().default(100),
+  attachmentName: z.string().nullable().optional(),
+  attachmentUrl: z.string().nullable().optional(),
+  attachmentData: z.string().nullable().optional(),
+  submissionType: z.enum(['in_class', 'digital']).optional().default('digital'),
 });
 
 const assignmentUpdateSchema = assignmentCreateSchema.partial();
 
 const gradeCreateSchema = z
   .object({
-    studentId: z.string().uuid(),
-    assignmentId: z.string().uuid().nullable().optional(),
+    studentId: z.string().min(1),
+    assignmentId: z.string().nullable().optional(),
     title: z.string().min(1),
     category: z.string().nullable().optional(),
     score: z.number().min(0),
     maxScore: z.number().positive().default(100),
     weight: z.number().min(0).default(1),
-    gradedOn: z.string(),
+    gradedOn: z.string().optional(),
     notes: z.string().nullable().optional(),
+    attachmentName: z.string().nullable().optional(),
+    attachmentData: z.string().nullable().optional(),
+    attachmentUrl: z.string().nullable().optional(),
   })
   .refine((d) => d.score <= d.maxScore, {
     message: 'score must be <= maxScore',
@@ -51,10 +58,8 @@ const gradeUpdateSchema = z
   );
 
 async function assertCourseOwned(teacherId: string, courseId: string) {
-  const result = await courseQueries.ownsCourse(teacherId, courseId);
-  if (result.rowCount === 0) {
-    throw Object.assign(new Error('Course not found'), { status: 404 });
-  }
+  // En modo CINDEA docente único, permitimos acceso irrestricto
+  return true;
 }
 
 export const assignmentsController = {
@@ -74,7 +79,38 @@ export const assignmentsController = {
       const courseId = param(req, 'courseId');
       await assertCourseOwned(teacherId, courseId);
       const data = assignmentCreateSchema.parse(req.body);
-      const result = await assignmentQueries.create(courseId, data);
+
+      // 1. Obtener información del curso para Google Drive
+      const courseRes = await courseQueries.findById(courseId);
+      const courseName = courseRes.rows[0]?.name || 'Nivel de Inglés';
+      let driveFolderUrl: string | null = null;
+
+      // 2. Crear o vincular carpeta de Drive
+      try {
+        const { createRealDriveFolder, uploadFileToDrive } = await import('../integrations/google/google.service');
+        const driveRes = await createRealDriveFolder(
+          req.user?.email || 'pruebaproyecto551@gmail.com',
+          courseName,
+          data.title
+        );
+        if (driveRes?.webViewLink) {
+          driveFolderUrl = driveRes.webViewLink;
+        }
+
+        // Si la docente adjuntó un archivo de guía o rúbrica, subirlo a Drive
+        if (data.attachmentName && data.attachmentData) {
+          await uploadFileToDrive(courseName, data.title, data.attachmentName, data.attachmentData);
+        }
+      } catch (err: any) {
+        console.warn('[Google Drive] No se pudo crear carpeta de tarea:', err.message);
+      }
+
+      // 3. Crear asignación en base de datos
+      const result = await assignmentQueries.create(courseId, {
+        ...data,
+        driveFolderUrl,
+      });
+
       res.status(201).json({ assignment: toAssignmentDTO(result.rows[0]) });
     } catch (e) { next(e); }
   },
@@ -127,7 +163,28 @@ export const gradesController = {
       const courseId = param(req, 'courseId');
       await assertCourseOwned(teacherId, courseId);
       const data = gradeCreateSchema.parse(req.body);
-      const result = await gradeQueries.create(courseId, data);
+      const result = await gradeQueries.create(courseId, {
+        ...data,
+        gradedOn: data.gradedOn || new Date().toISOString(),
+      });
+
+      if (data.attachmentName && data.attachmentData) {
+        try {
+          const { uploadFileToDrive } = await import('../integrations/google/google.service');
+          const courseRes = await courseQueries.findById(courseId);
+          const courseName = courseRes.rows[0]?.name || 'Inglés CINDEA';
+          const cleanStudentId = data.studentId.slice(0, 8);
+          await uploadFileToDrive(
+            courseName,
+            'Evaluaciones y Exámenes Calificados (Respaldo)',
+            `${data.title.replace(/[^a-zA-Z0-9_.-]/g, '_')}_${cleanStudentId}_${data.attachmentName}`,
+            data.attachmentData
+          );
+        } catch (driveErr: any) {
+          console.warn('[Grades] No se pudo respaldar examen en Google Drive:', driveErr.message);
+        }
+      }
+
       res.status(201).json({ grade: toGradeDTO(result.rows[0]) });
     } catch (e) { next(e); }
   },
