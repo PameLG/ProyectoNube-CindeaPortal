@@ -563,38 +563,7 @@ export function Attendance() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={async () => {
-              if (!courseId || students.length === 0) return;
-              setSaving('ALL');
-              try {
-                for (const st of students) {
-                  await attendanceService.mark(courseId, {
-                    studentId: st.id,
-                    date,
-                    status: 'present',
-                    lessonsCount,
-                  });
-                }
-                setSuccessMsg(`✅ Se marcaron los ${students.length} estudiantes como Presentes.`);
-                loadData();
-                setTimeout(() => setSuccessMsg(null), 3500);
-              } catch (e: any) {
-                setError('Error al marcar todos los estudiantes');
-              } finally {
-                setSaving(null);
-              }
-            }}
-            disabled={students.length === 0 || saving !== null}
-            className="col-span-2 sm:col-span-1 text-[11px] sm:text-xs font-bold border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-2xs cursor-pointer justify-center"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600 shrink-0" />
-            <span>Marcar Todos Presentes</span>
-          </Button>
-
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <Button
             variant="secondary"
             size="sm"
