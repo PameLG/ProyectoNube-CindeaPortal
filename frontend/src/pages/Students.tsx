@@ -463,10 +463,10 @@ export function Students() {
   return (
     <div className="space-y-6">
       {/* 1. Header Minimalista & Acciones */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600 shrink-0" />
+          <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 shrink-0" />
             <span>Lista de Estudiantes</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -474,38 +474,41 @@ export function Students() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="secondary"
+            size="sm"
             onClick={exportStudentsExcel}
             disabled={filteredStudents.length === 0}
-            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
+            className="text-[11px] sm:text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer justify-center"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
-            Descargar Excel (.xlsx)
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600 shrink-0" />
+            <span>Descargar Excel (.xlsx)</span>
           </Button>
 
           <Button
             variant="secondary"
+            size="sm"
             onClick={() => {
               setExcelFile(null);
               setParsedStudents([]);
               setParsingError(null);
               setOpenBatchModal(true);
             }}
-            className="text-xs font-bold border-slate-200 hover:bg-slate-50 bg-white text-slate-700 shadow-2xs cursor-pointer"
+            className="text-[11px] sm:text-xs font-bold border-slate-200 hover:bg-slate-50 bg-white text-slate-700 shadow-2xs cursor-pointer justify-center"
           >
-            <UploadCloud className="w-4 h-4 mr-1.5 text-blue-600" />
-            Cargar Archivo Excel
+            <UploadCloud className="w-4 h-4 mr-1.5 text-blue-600 shrink-0" />
+            <span>Cargar Archivo Excel</span>
           </Button>
 
           <Button
             variant="primary"
+            size="sm"
             onClick={() => setOpenSingleModal(true)}
-            className="text-xs font-bold bg-blue-600 hover:bg-blue-700 shadow-xs cursor-pointer text-white"
+            className="text-[11px] sm:text-xs font-bold bg-blue-600 hover:bg-blue-700 shadow-xs cursor-pointer text-white justify-center"
           >
-            <UserPlus className="w-4 h-4 mr-1.5" />
-            Nuevo Alumno
+            <UserPlus className="w-4 h-4 mr-1.5 shrink-0" />
+            <span>+ Nuevo Alumno</span>
           </Button>
         </div>
       </div>
@@ -521,7 +524,7 @@ export function Students() {
       {/* 2. Contenedor de Tabla con Toolbar Integrado */}
       <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
         {/* Barra de Búsqueda y Filtro Integrada en la Cabecera de la Tabla */}
-        <div className="p-3.5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="p-3.5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -529,16 +532,16 @@ export function Students() {
               placeholder="Buscar por nombre o cédula..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 shadow-2xs"
+              className="w-full pl-9 pr-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 shadow-2xs"
             />
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto">
-            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Nivel / Grado:</span>
+          <div className="flex items-center gap-2 w-full sm:w-auto min-w-0">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap shrink-0">Nivel / Grado:</span>
             <select
               value={selectedGrade}
               onChange={(e) => setSelectedGrade(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
+              className="w-full sm:w-auto rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer truncate"
             >
               <option value="ALL">Todos los Grados ({students.length})</option>
               {courses.map((c) => {

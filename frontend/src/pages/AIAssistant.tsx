@@ -218,10 +218,10 @@ export function AIAssistant() {
   return (
     <div className="space-y-5">
       {/* 1. Header Minimalista & Filtro de Grupo */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-blue-600 shrink-0" />
+          <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 shrink-0" />
             <span>Asistente de IA Docente</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
@@ -229,12 +229,12 @@ export function AIAssistant() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Grupo / Sede:</span>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-bold text-slate-500 whitespace-nowrap shrink-0">Grupo:</span>
           <select
             value={courseId}
             onChange={(e) => setCourseId(e.target.value)}
-            className="w-full sm:w-64 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none shadow-2xs"
+            className="w-full sm:w-64 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-blue-500 focus:outline-none shadow-2xs truncate"
           >
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
@@ -247,43 +247,43 @@ export function AIAssistant() {
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      {/* 2. Pestañas Limpias */}
-      <div className="flex gap-2 border-b border-slate-200">
+      {/* 2. Pestañas Limpias con Scroll Horizontal en Móvil */}
+      <div className="flex gap-2 border-b border-slate-200 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('chat')}
           className={cn(
-            'pb-3 px-4 text-xs md:text-sm font-semibold border-b-2 transition flex items-center gap-2',
+            'pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
             activeTab === 'chat'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           )}
         >
-          <MessageCircle className="w-4 h-4" />
-          Chat & Redactor de Circulares
+          <MessageCircle className="w-4 h-4 shrink-0" />
+          <span>Chat & Circulares</span>
         </button>
         <button
           onClick={() => setActiveTab('risk')}
           className={cn(
-            'pb-3 px-4 text-xs md:text-sm font-semibold border-b-2 transition flex items-center gap-2',
+            'pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
             activeTab === 'risk'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           )}
         >
-          <BrainCircuit className="w-4 h-4" />
-          Diagnóstico de Riesgo MEP
+          <BrainCircuit className="w-4 h-4 shrink-0" />
+          <span>Diagnóstico de Riesgo</span>
         </button>
         <button
           onClick={() => setActiveTab('rubrics')}
           className={cn(
-            'pb-3 px-4 text-xs md:text-sm font-semibold border-b-2 transition flex items-center gap-2',
+            'pb-2.5 px-3 text-xs sm:text-sm font-bold border-b-2 transition flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer',
             activeTab === 'rubrics'
               ? 'border-blue-600 text-blue-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
           )}
         >
-          <FileCheck className="w-4 h-4" />
-          Generador de Rúbricas
+          <FileCheck className="w-4 h-4 shrink-0" />
+          <span>Rúbricas MEP</span>
         </button>
       </div>
 

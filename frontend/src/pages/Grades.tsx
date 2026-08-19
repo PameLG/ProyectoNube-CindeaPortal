@@ -552,7 +552,7 @@ export function Grades() {
         </div>
 
         {/* Botones de Acción Agrupados y Ordenados */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
           <Button
             variant="secondary"
             size="sm"
@@ -567,10 +567,10 @@ export function Grades() {
               setOpenGroupModal(true);
             }}
             disabled={students.length === 0}
-            className="text-xs font-bold border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-2xs cursor-pointer"
+            className="text-[11px] sm:text-xs font-bold border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 shadow-2xs cursor-pointer justify-center"
           >
-            <CheckCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-            <span>Cotidiano (50%)</span>
+            <CheckCheck className="w-3.5 h-3.5 mr-1 text-emerald-600 shrink-0" />
+            <span className="truncate">Cotidiano (50%)</span>
           </Button>
 
           <Button
@@ -587,10 +587,10 @@ export function Grades() {
               setOpenGroupModal(true);
             }}
             disabled={students.length === 0}
-            className="text-xs font-bold border-indigo-200 text-indigo-800 bg-indigo-50 hover:bg-indigo-100 shadow-2xs cursor-pointer"
+            className="text-[11px] sm:text-xs font-bold border-indigo-200 text-indigo-800 bg-indigo-50 hover:bg-indigo-100 shadow-2xs cursor-pointer justify-center"
           >
-            <FileText className="w-3.5 h-3.5 mr-1 text-indigo-600" />
-            <span>Calificar Examen</span>
+            <FileText className="w-3.5 h-3.5 mr-1 text-indigo-600 shrink-0" />
+            <span className="truncate">Calificar Examen</span>
           </Button>
 
           <Button
@@ -598,10 +598,10 @@ export function Grades() {
             size="sm"
             onClick={() => setOpenPreviewModal(true)}
             disabled={students.length === 0}
-            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="text-[11px] sm:text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs justify-center"
           >
-            <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" />
-            Acta PDF
+            <FileText className="w-3.5 h-3.5 mr-1 text-blue-600 shrink-0" />
+            <span>Acta PDF</span>
           </Button>
 
           <Button
@@ -609,33 +609,33 @@ export function Grades() {
             size="sm"
             onClick={exportGradesExcel}
             disabled={students.length === 0}
-            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+            className="text-[11px] sm:text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs justify-center"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-            Descargar Excel (.xlsx)
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-600 shrink-0" />
+            <span className="truncate">Excel (.xlsx)</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => setOpen(true)}
             disabled={!courseId}
-            className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer"
+            className="col-span-2 sm:col-span-1 text-[11px] sm:text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer justify-center"
           >
-            <Plus className="w-3.5 h-3.5 mr-1" />
-            Nota Individual
+            <Plus className="w-3.5 h-3.5 mr-1 shrink-0" />
+            <span>+ Nota Individual</span>
           </Button>
         </div>
       </div>
 
       {/* 2. Barra de Filtro Compacta y Métricas Rápidas */}
       <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Grupo:</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full md:w-auto">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap shrink-0">Grupo:</span>
             <select
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none truncate"
             >
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -645,12 +645,12 @@ export function Grades() {
             </select>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Periodo:</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap shrink-0">Periodo:</span>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value as 'I' | 'II')}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
             >
               <option value="I">I Periodo (2026)</option>
               <option value="II">II Periodo (2026)</option>
@@ -659,20 +659,20 @@ export function Grades() {
         </div>
 
         {/* Resumen del Grupo en Píldoras */}
-        <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
-            <Users className="w-3.5 h-3.5 text-slate-500" />
-            <span>{students.length} alumnos</span>
+        <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 sm:gap-2 w-full md:w-auto">
+          <span className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-[11px] sm:text-xs font-bold text-center">
+            <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <span className="truncate">{students.length} alumnos</span>
           </span>
 
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 text-xs font-bold border border-blue-100">
-            <BarChart3 className="w-3.5 h-3.5 text-blue-600" />
-            <span>Prom: {classAvg} pts</span>
+          <span className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-blue-50 text-blue-800 text-[11px] sm:text-xs font-bold border border-blue-100 text-center">
+            <BarChart3 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            <span className="truncate">Prom: {classAvg}</span>
           </span>
 
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-100">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{passingRate}% Aprobación</span>
+          <span className="inline-flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 text-[11px] sm:text-xs font-bold border border-emerald-100 text-center">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="truncate">{passingRate}% Aprob.</span>
           </span>
         </div>
       </div>
