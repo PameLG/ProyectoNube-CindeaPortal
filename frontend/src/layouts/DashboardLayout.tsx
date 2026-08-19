@@ -81,32 +81,44 @@ export function DashboardLayout() {
           )}
         >
           {/* Header del Sidebar */}
-          <div className="p-4 border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center justify-between min-h-[73px]">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <div className="h-10 w-10 rounded-xl bg-blue-600/80 text-white flex items-center justify-center shadow-inner font-bold shrink-0">
-                <Languages className="w-5 h-5 text-amber-300" />
-              </div>
-              {!collapsed && (
-                <div className="min-w-0 transition-opacity duration-200">
-                  <div className="text-sm font-bold tracking-tight truncate">CINDEA MEP Cloud</div>
-                  <div className="text-[11px] text-blue-200 truncate">English Department</div>
+          <div
+            className={cn(
+              'border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center min-h-[73px] transition-all duration-200',
+              collapsed ? 'justify-center p-3' : 'justify-between p-4'
+            )}
+          >
+            {collapsed ? (
+              <button
+                type="button"
+                onClick={toggleCollapsed}
+                title="Desplegar menú lateral"
+                className="h-10 w-10 rounded-xl bg-blue-600/80 hover:bg-blue-500 text-white flex items-center justify-center shadow-inner transition hover:scale-105"
+              >
+                <PanelLeftOpen className="w-5 h-5 text-amber-300" />
+              </button>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="h-10 w-10 rounded-xl bg-blue-600/80 text-white flex items-center justify-center shadow-inner font-bold shrink-0">
+                    <Languages className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-bold tracking-tight truncate">CINDEA MEP Cloud</div>
+                    <div className="text-[11px] text-blue-200 truncate">English Department</div>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* Botón Plegar / Desplegar en el Header del Sidebar */}
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              title={collapsed ? 'Desplegar menú lateral' : 'Plegar menú lateral'}
-              className="hidden md:flex p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition shrink-0 ml-auto"
-            >
-              {collapsed ? (
-                <PanelLeftOpen className="w-5 h-5" />
-              ) : (
-                <PanelLeftClose className="w-5 h-5" />
-              )}
-            </button>
+                {/* Botón Plegar en el Header */}
+                <button
+                  type="button"
+                  onClick={toggleCollapsed}
+                  title="Plegar menú lateral"
+                  className="p-1.5 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition shrink-0"
+                >
+                  <PanelLeftClose className="w-5 h-5" />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Navegación del Menú */}
