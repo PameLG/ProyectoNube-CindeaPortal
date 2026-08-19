@@ -1973,6 +1973,14 @@
       "revoked": false,
       "expires_at": "2026-08-26T17:26:47.669Z",
       "created_at": "2026-08-19T17:26:47.669Z"
+    },
+    {
+      "id": "fdcfd513-26d1-4850-8d06-ccbc870fcb07",
+      "user_id": "88888888-8888-4888-a888-888888888888",
+      "token_hash": "de5b4b791731783283a9c7bfb29be355f71974b2c318f9e331dbe8dd97cbca07",
+      "revoked": false,
+      "expires_at": "2026-08-26T17:33:41.979Z",
+      "created_at": "2026-08-19T17:33:41.980Z"
     }
   ],
   "justifications": [],

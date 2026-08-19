@@ -44,9 +44,12 @@ import {
   Contrast,
   Loader2,
   Download,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { cn } from '../utils';
 import { alerts } from '../utils/alerts';
+import { FormattedMessage } from '../components/FormattedMessage';
 
 export interface AttachedFileItem {
   id: string;
@@ -320,6 +323,7 @@ export function StudentPortal() {
 
   // Tutor IA
   const [tutorQuestion, setTutorQuestion] = useState('');
+  const [copiedTutorIdx, setCopiedTutorIdx] = useState<number | null>(null);
   const [tutorChat, setTutorChat] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
     {
       sender: 'ai',
@@ -1590,54 +1594,97 @@ export function StudentPortal() {
         {activeTab === 'tutor' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             <div className="lg:col-span-8 space-y-4">
-              <div className="rounded-2xl border border-indigo-200 bg-white shadow-sm flex flex-col h-[520px]">
+              <div className="rounded-3xl border border-indigo-200/80 bg-white shadow-2xs flex flex-col h-[560px] overflow-hidden">
                 {/* Chat Header */}
-                <div className="p-4 bg-gradient-to-r from-indigo-900 to-slate-900 text-white rounded-t-2xl flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-                      <Bot className="w-5 h-5 text-amber-300" />
+                <div className="p-3.5 sm:p-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 text-white flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-2xl bg-white/10 backdrop-blur-xs flex items-center justify-center border border-white/20 shadow-inner">
+                      <Bot className="w-5 h-5 text-amber-300 animate-pulse" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-bold">English AI Tutor (Gemini)</h3>
-                      <p className="text-[11px] text-indigo-200">Asistente de inglés para estudiantes de CINDEA</p>
+                      <h3 className="text-sm font-black tracking-tight flex items-center gap-1.5">
+                        <span>English AI Tutor</span>
+                        <span className="text-[10px] font-bold bg-amber-400 text-slate-950 px-1.5 py-0.2 rounded-md">Gemini</span>
+                      </h3>
+                      <p className="text-[11px] text-indigo-100/90 font-medium">Asistente y tutor de inglés para estudiantes CINDEA</p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2 py-0.5 rounded">
+                  <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                     Online 24/7
                   </span>
                 </div>
 
                 {/* Chat Messages */}
-                <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+                <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 bg-slate-50/60">
                   {tutorChat.map((msg, idx) => (
                     <div
                       key={idx}
                       className={cn(
-                        'flex flex-col max-w-[85%] rounded-xl p-3 text-xs leading-relaxed',
+                        'flex flex-col max-w-[90%] sm:max-w-[80%] rounded-3xl p-4 text-xs leading-relaxed transition-all shadow-2xs',
                         msg.sender === 'user'
-                          ? 'ml-auto bg-blue-600 text-white rounded-br-none'
-                          : 'mr-auto bg-white text-slate-800 border border-slate-200 rounded-bl-none shadow-xs'
+                          ? 'ml-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-xs'
+                          : 'mr-auto bg-white text-slate-800 border border-slate-200/90 rounded-tl-xs'
                       )}
                     >
-                      <span className="text-[10px] font-bold opacity-75 mb-0.5">
-                        {msg.sender === 'user' ? `Tú (${currentStudent.name.split(' ')[0]})` : 'English AI Tutor'}
-                      </span>
-                      <p className="whitespace-pre-line">{msg.text}</p>
+                      <div className="flex items-center justify-between gap-2 mb-1.5 pb-1 border-b border-black/5 dark:border-white/10">
+                        <span className="text-[10px] font-bold opacity-80 flex items-center gap-1">
+                          {msg.sender === 'user' ? (
+                            <>👤 Tú ({currentStudent?.name?.split(' ')[0] || 'Estudiante'})</>
+                          ) : (
+                            <>🇬🇧 English AI Tutor</>
+                          )}
+                        </span>
+
+                        {msg.sender === 'ai' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(msg.text);
+                              setCopiedTutorIdx(idx);
+                              setTimeout(() => setCopiedTutorIdx(null), 2000);
+                            }}
+                            className="text-[10px] text-slate-400 hover:text-indigo-600 font-semibold flex items-center gap-1 transition px-1.5 py-0.5 rounded hover:bg-slate-100 cursor-pointer"
+                            title="Copiar texto"
+                          >
+                            {copiedTutorIdx === idx ? (
+                              <>
+                                <Check className="w-3 h-3 text-emerald-600" />
+                                <span className="text-emerald-600">¡Copiado!</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3 h-3" />
+                                <span>Copiar</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Renderizador de Markdown Elegante sin Asteriscos Crudos */}
+                      {msg.sender === 'ai' ? (
+                        <FormattedMessage content={msg.text} />
+                      ) : (
+                        <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
+                      )}
                     </div>
                   ))}
+
                   {tutorLoading && (
-                    <div className="mr-auto bg-white p-3 rounded-xl border border-slate-200 text-xs text-slate-500 animate-pulse">
-                      Escribiendo respuesta y explicación pedagógica...
+                    <div className="mr-auto bg-white p-3.5 rounded-3xl rounded-tl-xs border border-slate-200 text-xs text-slate-500 shadow-2xs flex items-center gap-2.5">
+                      <Loader2 className="w-4 h-4 text-indigo-600 animate-spin" />
+                      <span className="font-semibold text-slate-700">El Tutor IA está redactando tu explicación en inglés...</span>
                     </div>
                   )}
                 </div>
 
                 {/* Chat Input */}
-                <form onSubmit={handleAskTutor} className="p-3 bg-white border-t border-slate-200 rounded-b-2xl flex gap-2">
+                <form onSubmit={handleAskTutor} className="p-3 bg-white border-t border-slate-200/80 flex items-center gap-2">
                   <input
                     type="text"
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs focus:outline-none focus:border-indigo-500"
-                    placeholder="Pregúntame sobre vocabulario en inglés, pronunciación o gramática..."
+                    className="flex-1 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-2.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 shadow-2xs transition"
+                    placeholder="Pregúntame sobre vocabulario, pronunciación, gramática o tareas..."
                     value={tutorQuestion}
                     onChange={(e) => setTutorQuestion(e.target.value)}
                     disabled={tutorLoading}
@@ -1647,10 +1694,10 @@ export function StudentPortal() {
                     size="sm"
                     type="submit"
                     disabled={tutorLoading || !tutorQuestion.trim()}
-                    className="text-xs font-bold bg-indigo-600 hover:bg-indigo-700"
+                    className="rounded-2xl px-4 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 shadow-xs shrink-0 cursor-pointer"
                   >
-                    <Send className="w-3.5 h-3.5 mr-1" />
-                    Preguntar
+                    <Send className="w-3.5 h-3.5 sm:mr-1" />
+                    <span className="hidden sm:inline">Preguntar</span>
                   </Button>
                 </form>
               </div>
@@ -1658,28 +1705,38 @@ export function StudentPortal() {
 
             {/* Sugerencias Rápidas de Preguntas CINDEA */}
             <div className="lg:col-span-4 space-y-3">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Preguntas Frecuentes Sugeridas:
-              </h3>
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Preguntas Frecuentes Sugeridas:
+                </h3>
+              </div>
 
               <div className="space-y-2">
                 {[
-                  '¿Cuál es la diferencia entre Simple Past y Present Perfect?',
-                  '¿Cómo se pronuncian las terminaciones -ed en los verbos regulares?',
-                  'Corrige esta frase: "I have 20 years old and I am study English"',
-                  '¿Qué expresiones puedo usar para ordenar comida en un restaurante?',
-                  'Explícame cómo responder preguntas en una entrevista de trabajo en inglés',
-                ].map((prompt, idx) => (
+                  { tag: 'Grammar', prompt: '¿Cuál es la diferencia entre Simple Past y Present Perfect con ejemplos?' },
+                  { tag: 'Speaking', prompt: '¿Cómo se pronuncian las terminaciones -ed en los verbos regulares?' },
+                  { tag: 'Writing', prompt: 'Corrige esta frase: "I have 20 years old and I am study English"' },
+                  { tag: 'Useful Phrases', prompt: '¿Qué expresiones puedo usar para ordenar comida en un restaurante?' },
+                  { tag: 'Jobs', prompt: 'Explícame cómo responder preguntas en una entrevista de trabajo en inglés' },
+                ].map((item, idx) => (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => {
-                      setTutorQuestion(prompt);
+                      setTutorQuestion(item.prompt);
                     }}
-                    className="w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition text-xs text-slate-700 shadow-2xs flex items-center justify-between gap-2"
+                    className="w-full text-left p-3 rounded-2xl bg-white border border-slate-200/90 hover:border-indigo-300 hover:bg-indigo-50/40 transition text-xs text-slate-700 shadow-2xs flex items-center justify-between gap-2.5 group cursor-pointer"
                   >
-                    <span>{prompt}</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <div className="min-w-0">
+                      <span className="inline-block px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[9px] uppercase tracking-wider mb-1 border border-indigo-100">
+                        {item.tag}
+                      </span>
+                      <p className="font-semibold text-slate-800 leading-snug group-hover:text-indigo-700 transition line-clamp-2">
+                        {item.prompt}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-indigo-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition shrink-0" />
                   </button>
                 ))}
               </div>

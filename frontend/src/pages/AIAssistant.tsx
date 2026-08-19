@@ -22,6 +22,7 @@ import {
   Printer,
 } from 'lucide-react';
 import { cn } from '../utils';
+import { FormattedMessage } from '../components/FormattedMessage';
 
 interface ChatMessage {
   id: string;
@@ -338,8 +339,12 @@ export function AIAssistant() {
                         : 'bg-slate-50/90 border border-slate-200/80 text-slate-800'
                     )}
                   >
-                    <div className="whitespace-pre-wrap font-sans selection:bg-blue-200 selection:text-blue-900">
-                      {msg.text}
+                    <div className="font-sans selection:bg-blue-200 selection:text-blue-900">
+                      {isUser ? (
+                        <p className="whitespace-pre-wrap font-medium">{msg.text}</p>
+                      ) : (
+                        <FormattedMessage content={msg.text} />
+                      )}
                     </div>
 
                     <div
