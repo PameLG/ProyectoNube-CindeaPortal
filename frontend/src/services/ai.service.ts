@@ -2,6 +2,14 @@ import { api } from './api';
 import type { AIDiagnosticReport, AIRubric } from '../types';
 
 export const aiService = {
+  async chatTeacher(data: {
+    message: string;
+    courseName?: string;
+    teacherName?: string;
+  }): Promise<{ reply: string; timestamp: string }> {
+    const res = await api.post<{ reply: string; timestamp: string }>('/ai/chat', data);
+    return res.data;
+  },
   async generateNotice(data: {
     type: 'exam_reminder' | 'assignment_reminder' | 'low_grade_alert' | 'absence_alert' | 'meeting_call' | 'congratulation';
     studentName?: string;

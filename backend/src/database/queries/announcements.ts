@@ -28,7 +28,7 @@ export function toAnnouncementDTO(row: AnnouncementRow): AnnouncementDTO {
     title: row.title,
     content: row.content,
     channels: row.channels || ['email', 'whatsapp'],
-    sentBy: row.sent_by || 'Teacher Diana',
+    sentBy: row.sent_by || 'Docente de Inglés CINDEA',
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
@@ -59,7 +59,7 @@ export const announcementQueries = {
       title: data.title,
       content: data.content,
       channels: data.channels ?? ['email', 'whatsapp'],
-      sent_by: data.sentBy ?? 'Teacher Diana',
+      sent_by: data.sentBy ?? 'Docente de Inglés CINDEA',
       created_at: new Date().toISOString(),
     };
     db.announcements.unshift(newA);

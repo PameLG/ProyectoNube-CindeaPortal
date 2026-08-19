@@ -3,6 +3,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { coursesService } from '../services/courses.service';
 import { calendarService, type CalendarEvent } from '../services/calendar.service';
 import type { Course } from '../types';
+import { alerts } from '../utils/alerts';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import {
@@ -20,6 +21,7 @@ import {
   Trash2,
   FolderSync,
 } from 'lucide-react';
+import { cn } from '../utils';
 
 export function GoogleCalendarPage() {
   const { user } = useAuth();
@@ -39,7 +41,7 @@ export function GoogleCalendarPage() {
   const [durationMinutes, setDurationMinutes] = useState<number>(90);
   const [eventType, setEventType] = useState<'exam' | 'civic' | 'meeting' | 'deadline'>('exam');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
-  const [locationName, setLocationName] = useState<string>('CINDEA Cañas · Gimnasio / Aulas');
+  const [locationName, setLocationName] = useState<string>('CINDEA · Gimnasio / Aulas');
   const [eventDesc, setEventDesc] = useState<string>('');
 
   const targetEmail = user?.email || 'pruebaproyecto551@gmail.com';
@@ -70,15 +72,15 @@ export function GoogleCalendarPage() {
     const baseToSync = [
       {
         summary: '🇨🇷 Acto Cívico Oficial: Día de la Independencia de Costa Rica',
-        description: 'Celebración patriótica en CINDEA Cañas con entonación de himnos, faroles y actos culturales.',
-        location: 'Gimnasio Central CINDEA Cañas',
+        description: 'Celebración patriótica en CINDEA con entonación de himnos, faroles y actos culturales.',
+        location: 'Gimnasio Central CINDEA',
         startDateTime: '2026-09-15T18:30:00',
         endDateTime: '2026-09-15T20:30:00',
       },
       {
         summary: '🇨🇷 Acto Cívico: Conmemoración Batalla de Rivas y Juan Santamaría',
         description: 'Homenaje a los héroes nacionales. Asistencia oficial para personal docente y estudiantes.',
-        location: 'Patio Central CINDEA Cañas',
+        location: 'Patio Central CINDEA',
         startDateTime: '2026-04-11T18:00:00',
         endDateTime: '2026-04-11T19:30:00',
       },
@@ -169,12 +171,18 @@ export function GoogleCalendarPage() {
 
   const handleDeleteEvent = async (id?: string) => {
     if (!id) return;
-    if (!confirm('¿Deseas eliminar este evento de tu Google Calendar?')) return;
+    const ok = await alerts.confirmDelete(
+      '¿Eliminar de Google Calendar?',
+      'Esta actividad será removida de tu cuenta de Google.'
+    );
+    if (!ok) return;
     try {
       await calendarService.deleteEvent(id, targetEmail);
       setEvents((prev) => prev.filter((e) => e.id !== id));
+      alerts.success('Evento eliminado', 'Se actualizó tu Google Calendar.');
     } catch (err) {
       console.error('Error al eliminar:', err);
+      alerts.error('Error al eliminar', 'No se pudo remover el evento de Google Calendar.');
     }
   };
 
@@ -203,74 +211,57 @@ export function GoogleCalendarPage() {
   });
 
   const openGoogleCalendarDirect = () => {
-    window.open('https://calendar.google.com', '_blank');
+    window.open(`https://calendar.google.com/calendar/r?authuser=${encodeURIComponent(targetEmail)}`, '_blank');
   };
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Ejecutivo */}
-      <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 md:p-8 text-white shadow-xs">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-xs font-semibold text-emerald-300 border border-emerald-500/30">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Google Calendar Conectado en Tiempo Real</span>
-            </div>
-            <h1 className="text-xl md:text-2xl font-black tracking-tight">
-              Calendario de Actividades, Exámenes y Actos Cívicos
-            </h1>
-            <p className="text-xs md:text-sm text-slate-300">
-              Cuenta vinculada: <strong className="text-blue-300 font-mono">{targetEmail}</strong>
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={openGoogleCalendarDirect}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700 text-xs font-bold flex items-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
-              <span>Abrir calendar.google.com</span>
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5"
-            >
-              <Plus className="w-3.5 h-3.5 text-blue-200" />
-              <span>Agendar Actividad</span>
-            </Button>
-          </div>
+      {/* 1. Header Minimalista & Acciones */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <CalendarIcon className="w-6 h-6 text-blue-600" />
+            <span>Calendario Institucional</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Actividades, exámenes, actos cívicos y reuniones programadas.
+          </p>
         </div>
-      </div>
 
-      {/* Banner de Sincronización Inicial si hay pocos eventos */}
-      {events.length < 3 && (
-        <div className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
-              <FolderSync className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-xs font-bold text-blue-950">¿Deseas sincronizar las fechas oficiales del semestre?</h3>
-              <p className="text-[11px] text-blue-800">
-                Sube automáticamente a tu Google Calendar los actos cívicos patrios, fechas de exámenes parciales y asambleas de padres.
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={openGoogleCalendarDirect}
+            className="text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+          >
+            <ExternalLink className="w-3.5 h-3.5 mr-1 text-blue-600" />
+            <span>Abrir Calendar ↗</span>
+          </Button>
+
+          <Button
+            variant="secondary"
             size="sm"
             onClick={handleSyncBaseEvents}
             disabled={syncingAll}
-            className="bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold shrink-0"
+            className="text-xs font-bold border-blue-200 text-blue-800 bg-blue-50/70 hover:bg-blue-100 shadow-2xs"
+            title="Cargar fechas patrias y exámenes oficiales del MEP"
           >
-            {syncingAll ? 'Sincronizando...' : 'Sincronizar Fechas Institucionales'}
+            <FolderSync className={`w-3.5 h-3.5 mr-1 text-blue-600 ${syncingAll ? 'animate-spin' : ''}`} />
+            <span>{syncingAll ? 'Sincronizando...' : 'Fechas MEP'}</span>
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            <span>Agendar Evento</span>
           </Button>
         </div>
-      )}
+      </div>
 
       {successMsg && (
         <div className="p-3 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl font-bold flex items-center gap-2 text-xs">
@@ -279,212 +270,170 @@ export function GoogleCalendarPage() {
         </div>
       )}
 
-      {/* 2. Filtros de Categorías Clave */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setActiveFilter('all')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeFilter === 'all'
-              ? 'bg-slate-900 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-          }`}
-        >
-          <CalendarDays className="w-3.5 h-3.5" />
-          <span>Todas en Google Calendar ({events.length})</span>
-        </button>
+      {/* 2. Filtros de Categorías Minimalistas */}
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {[
+          { id: 'all', label: `Todos (${events.length})`, icon: CalendarDays },
+          { id: 'exams', label: '📝 Exámenes', icon: FileCheck2 },
+          { id: 'civic', label: '🇨🇷 Actos Cívicos', icon: Flag },
+          { id: 'meetings', label: '👨‍👩‍👧 Reuniones', icon: Users },
+          { id: 'deadlines', label: '⏰ Cierres', icon: AlertCircle },
+        ].map((f) => {
+          const Icon = f.icon;
+          const isActive = activeFilter === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setActiveFilter(f.id)}
+              className={cn(
+                'px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer',
+                isActive
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{f.label}</span>
+            </button>
+          );
+        })}
 
         <button
           type="button"
-          onClick={() => setActiveFilter('exams')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeFilter === 'exams'
-              ? 'bg-rose-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-rose-50 hover:text-rose-700'
-          }`}
+          onClick={loadData}
+          disabled={loading}
+          className="ml-auto p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+          title="Actualizar eventos desde Google"
         >
-          <FileCheck2 className="w-3.5 h-3.5 text-rose-500" />
-          <span>Próximos Exámenes</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter('civic')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeFilter === 'civic'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-blue-50 hover:text-blue-700'
-          }`}
-        >
-          <Flag className="w-3.5 h-3.5 text-blue-500" />
-          <span>Actos Cívicos</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter('meetings')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeFilter === 'meetings'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-purple-50 hover:text-purple-700'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5 text-purple-500" />
-          <span>Reuniones de Padres</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveFilter('deadlines')}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeFilter === 'deadlines'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50 hover:text-amber-700'
-          }`}
-        >
-          <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
-          <span>Cierres de Periodo</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* 3. Lista de Actividades en Google Calendar */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-4 h-4 text-blue-600" />
-            <h2 className="text-base font-bold text-slate-900">
-              Eventos Sincronizados en tu Google Calendar ({filteredEvents.length})
-            </h2>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={loadData}
-            disabled={loading}
-            className="text-xs font-bold text-slate-600 border-slate-200 hover:bg-slate-50 flex items-center gap-1.5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Actualizar desde Google</span>
-          </Button>
-        </div>
-
+      {/* 3. Stream de Agenda Minimalista */}
+      <div className="space-y-2.5">
         {filteredEvents.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 space-y-3">
-            <CalendarIcon className="w-10 h-10 mx-auto text-slate-300" />
-            <p className="text-sm font-medium">No hay actividades agendadas en esta categoría en Google Calendar.</p>
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setIsModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold mx-auto"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Crear Nueva Actividad
-            </Button>
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-12 text-center text-slate-400 space-y-2">
+            <CalendarDays className="w-8 h-8 text-slate-300 mx-auto" />
+            <p className="font-bold text-slate-700 text-xs">No hay actividades agendadas en esta categoría.</p>
+            <p className="text-slate-400 text-[11px]">Haz clic en "+ Agendar" para crear un evento en Google Calendar.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredEvents.map((evt, index) => {
-              const startDate = evt.start ? new Date(evt.start) : null;
-              const dateFormatted = startDate && !isNaN(startDate.getTime())
-                ? startDate.toLocaleDateString('es-CR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-                : 'Fecha por definir';
-              const timeFormatted = startDate && !isNaN(startDate.getTime())
-                ? startDate.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })
-                : '18:00';
+          filteredEvents.map((evt, index) => {
+            const startDate = evt.start ? new Date(evt.start) : null;
+            const dayNum = startDate && !isNaN(startDate.getTime()) ? startDate.getDate() : '--';
+            const months = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SET', 'OCT', 'NOV', 'DIC'];
+            const monthStr = startDate && !isNaN(startDate.getTime()) ? months[startDate.getMonth()] : '---';
+            const timeFormatted = startDate && !isNaN(startDate.getTime())
+              ? startDate.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })
+              : '18:00';
 
-              const isExam = evt.summary.toLowerCase().includes('examen') || evt.summary.toLowerCase().includes('prueba');
-              const isCivic = evt.summary.toLowerCase().includes('acto') || evt.summary.toLowerCase().includes('cívico') || evt.summary.toLowerCase().includes('independencia') || evt.summary.toLowerCase().includes('batalla');
-              const isMeeting = evt.summary.toLowerCase().includes('padres') || evt.summary.toLowerCase().includes('asamblea') || evt.summary.toLowerCase().includes('boletin');
-              const isDeadline = evt.summary.toLowerCase().includes('cierre') || evt.summary.toLowerCase().includes('sicin');
+            const isExam = evt.summary.toLowerCase().includes('examen') || evt.summary.toLowerCase().includes('prueba');
+            const isCivic = evt.summary.toLowerCase().includes('acto') || evt.summary.toLowerCase().includes('cívico') || evt.summary.toLowerCase().includes('independencia') || evt.summary.toLowerCase().includes('batalla');
+            const isMeeting = evt.summary.toLowerCase().includes('padres') || evt.summary.toLowerCase().includes('asamblea') || evt.summary.toLowerCase().includes('boletin');
+            const isDeadline = evt.summary.toLowerCase().includes('cierre') || evt.summary.toLowerCase().includes('sicin');
 
-              return (
-                <div
-                  key={evt.id || index}
-                  className={`rounded-2xl border p-5 transition flex flex-col justify-between gap-3 text-xs ${
-                    isExam
-                      ? 'bg-rose-50/40 border-rose-200 hover:border-rose-300'
-                      : isCivic
-                      ? 'bg-blue-50/40 border-blue-200 hover:border-blue-300'
-                      : isMeeting
-                      ? 'bg-purple-50/40 border-purple-200 hover:border-purple-300'
-                      : isDeadline
-                      ? 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
-                      : 'bg-slate-50/40 border-slate-200 hover:border-slate-300'
-                  } hover:bg-white hover:shadow-xs`}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md ${
-                          isExam
-                            ? 'bg-rose-100 text-rose-900 border border-rose-200'
-                            : isCivic
-                            ? 'bg-blue-100 text-blue-900 border border-blue-200'
-                            : isMeeting
-                            ? 'bg-purple-100 text-purple-900 border border-purple-200'
-                            : isDeadline
-                            ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                            : 'bg-emerald-100 text-emerald-900 border border-emerald-200'
-                        }`}
-                      >
-                        {isExam
-                          ? '📝 Prueba / Examen'
-                          : isCivic
-                          ? '🇨🇷 Acto Cívico'
-                          : isMeeting
-                          ? '👨‍👩‍👧 Reunión de Padres'
-                          : isDeadline
-                          ? '⏰ Cierre de Periodo'
-                          : 'Google Calendar Event'}
+            const badgeBg = isExam
+              ? 'bg-rose-50 text-rose-800 border-rose-200'
+              : isCivic
+              ? 'bg-blue-50 text-blue-800 border-blue-200'
+              : isMeeting
+              ? 'bg-purple-50 text-purple-800 border-purple-200'
+              : isDeadline
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : 'bg-emerald-50 text-emerald-800 border-emerald-200';
+
+            const badgeLabel = isExam
+              ? '📝 Prueba'
+              : isCivic
+              ? '🇨🇷 Acto Cívico'
+              : isMeeting
+              ? '👨‍👩‍👧 Reunión'
+              : isDeadline
+              ? '⏰ Cierre'
+              : 'Evento';
+
+            const cleanDesc = evt.description?.split('\n')[0] || '';
+
+            return (
+              <div
+                key={evt.id || index}
+                className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs hover:border-blue-200 hover:shadow-xs transition flex items-center justify-between gap-3 group"
+              >
+                {/* Bloque Fecha Minimalista */}
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200/90 flex flex-col items-center justify-center shrink-0 text-center shadow-2xs">
+                    <span className="text-[9px] font-extrabold uppercase text-blue-600 tracking-wider leading-none">
+                      {monthStr}
+                    </span>
+                    <span className="text-base font-black text-slate-900 leading-tight">
+                      {dayNum}
+                    </span>
+                  </div>
+
+                  {/* Contenido del Evento */}
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn('text-[10px] font-bold px-2 py-0.5 rounded-md border', badgeBg)}>
+                        {badgeLabel}
                       </span>
-                      <span className="font-mono font-bold text-slate-600 flex items-center gap-1">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                        {evt.summary}
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500 flex-wrap">
+                      <span className="inline-flex items-center gap-1 font-semibold text-slate-700">
                         <Clock className="w-3 h-3 text-slate-400" />
                         {timeFormatted}
                       </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-slate-900 leading-snug">{evt.summary}</h3>
-                    {evt.description && (
-                      <p className="text-slate-600 text-[11px] leading-relaxed pt-1 bg-white/70 p-2.5 rounded-xl border border-slate-200/60 whitespace-pre-line">
-                        {evt.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="pt-2.5 border-t border-slate-200/70 flex flex-wrap items-center justify-between gap-2 text-slate-500 text-[11px]">
-                    <span className="font-semibold text-slate-800 flex items-center gap-1 capitalize">
-                      <CalendarDays className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                      {dateFormatted}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {evt.htmlLink && (
-                        <a
-                          href={evt.htmlLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900 font-bold hover:underline"
-                        >
-                          <span>Abrir en Google</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                      {evt.location && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="truncate max-w-[220px]">{evt.location}</span>
+                        </>
                       )}
-                      {evt.id && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteEvent(evt.id)}
-                          className="text-slate-400 hover:text-rose-600 transition p-1"
-                          title="Eliminar de Google Calendar"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                      {cleanDesc && !cleanDesc.startsWith('Actividad:') && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <span className="truncate max-w-[260px] text-slate-400">{cleanDesc}</span>
+                        </>
                       )}
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Acciones Rápidas (Alineadas a la derecha) */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {evt.htmlLink && (
+                    <a
+                      href={
+                        evt.htmlLink.includes('?')
+                          ? `${evt.htmlLink}&authuser=${encodeURIComponent(targetEmail)}`
+                          : `${evt.htmlLink}?authuser=${encodeURIComponent(targetEmail)}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-200 transition"
+                      title="Abrir en Google Calendar"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                  {evt.id && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteEvent(evt.id)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                      title="Eliminar de Google Calendar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -610,7 +559,7 @@ export function GoogleCalendarPage() {
             <input
               type="text"
               className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-blue-500 focus:outline-none"
-              placeholder="Ej. Gimnasio CINDEA Cañas / Aula 3 / Comedor"
+              placeholder="Ej. Gimnasio CINDEA / Aula 3 / Comedor"
               value={locationName}
               onChange={(e) => setLocationName(e.target.value)}
             />

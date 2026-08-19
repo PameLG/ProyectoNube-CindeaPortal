@@ -19,17 +19,35 @@ import { AIAssistant } from './pages/AIAssistant';
 import { Planning } from './pages/Planning';
 import { GoogleCalendarPage } from './pages/GoogleCalendarPage';
 import { StudentPortal } from './pages/StudentPortal';
+import { LoginEstudiante } from './pages/LoginEstudiante';
 import { Loading } from './components/Loading';
 import { ForcePasswordChangeModal } from './components/ForcePasswordChangeModal';
 
 function OAuthCallback() {
-  const { status } = useAuth();
+  const { user, status } = useAuth();
   const navigate = useNavigate();
+
   useEffect(() => {
-    if (status === 'authenticated') navigate('/dashboard', { replace: true });
-    else if (status === 'unauthenticated') navigate('/login', { replace: true });
-  }, [status, navigate]);
-  return <Loading label="Completando inicio de sesión..." />;
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    if (accessToken && refreshToken) {
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('refresh_token', refreshToken);
+    }
+
+    if (status === 'authenticated') {
+      if (user?.role === 'student') {
+        navigate('/student-portal', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    } else if (status === 'unauthenticated' && !accessToken && !localStorage.getItem('access_token')) {
+      navigate('/login', { replace: true });
+    }
+  }, [status, user, navigate]);
+
+  return <Loading label="Iniciando sesión con Google..." />;
 }
 
 export default function App() {
@@ -38,11 +56,17 @@ export default function App() {
       <AuthProvider>
         <ForcePasswordChangeModal />
         <Routes>
+          {/* Página de inicio — con header/footer público */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
+
+          {/* Login Docente — sin header con botones */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Login Estudiante — sin header con botones */}
+          <Route path="/estudiante" element={<LoginEstudiante />} />
 
           {/* Portal del Estudiante (Protegido con Cédula/PIN) */}
           <Route

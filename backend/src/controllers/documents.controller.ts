@@ -45,14 +45,14 @@ export const documentsController = {
         const cRes = await courseQueries.findById(data.courseId);
         finalCourseName = cRes.rows[0]?.name || 'Inglés CINDEA';
       }
-      const courseFolder = finalCourseName || 'Documentos Generales CINDEA';
+      const courseFolder = 'Documentos Generales';
 
       const categoryFolderMap: Record<string, string> = {
-        planeamiento: 'Planeamientos Didácticos Oficiales',
-        examen: 'Exámenes e Instrumentos de Evaluación (Respaldo)',
-        guia: 'Guías de Trabajo Autónomo y Prácticas',
-        rubrica: 'Rúbricas y Escalas de Calificación',
-        otro: 'Recursos Didácticos y Apoyo',
+        planeamiento: 'Planeamientos Didácticos MEP',
+        examen: 'Exámenes y Pruebas (Respaldo Oficial)',
+        guia: 'Guías de Trabajo Autónomo (GTA)',
+        rubrica: 'Rúbricas y Escalas Evaluativas',
+        otro: 'Recursos y Material Didáctico',
       };
 
       const targetSubFolder = categoryFolderMap[data.category] || 'Documentos y Respaldos';

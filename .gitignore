@@ -39,3 +39,5 @@ google_tokens.json
 backend/test_*.js
 backend/clean_*.js
 backend/organize_*.js
+.agents/
+mkzip.ps1

@@ -320,7 +320,7 @@ function getInitialSeedData(): LocalDBState {
         content: 'Dear CINDEA students: Please remember that Task #1 (Reading & Essay) is due this Friday on the Cloud Platform. Also, review the irregular verbs list for our oral practice next lesson.',
         channels: ['email', 'whatsapp'],
         created_at: new Date().toISOString(),
-        sent_by: 'Teacher Diana Chavarría',
+        sent_by: 'Docente de Inglés CINDEA',
       },
     ],
     files: [],

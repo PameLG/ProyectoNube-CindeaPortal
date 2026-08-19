@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { ErrorMessage } from '../components/ErrorMessage';
@@ -11,7 +12,6 @@ import type { AttendanceRecord, AttendanceStatus, AttendanceSummaryItem, Course,
 import {
   CalendarCheck,
   CheckCircle2,
-  Download,
   Users,
   Clock,
   Paperclip,
@@ -20,6 +20,7 @@ import {
   FileText,
   WifiOff,
   RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { cn } from '../utils';
 
@@ -438,38 +439,6 @@ export function Attendance() {
     }
   };
 
-  const markAllPresent = async () => {
-    if (!courseId || students.length === 0) return;
-    setSaving('all');
-    setError(null);
-    try {
-      for (const st of students) {
-        if (navigator.onLine) {
-          await attendanceService.mark(courseId, {
-            studentId: st.id,
-            date,
-            status: 'present',
-            lessonsCount,
-          });
-        } else {
-          const offlineItem = { courseId, studentId: st.id, date, status: 'present' as AttendanceStatus, lessonsCount };
-          const raw = localStorage.getItem('cindea_offline_attendance');
-          const queue = raw ? JSON.parse(raw) : [];
-          queue.push(offlineItem);
-          localStorage.setItem('cindea_offline_attendance', JSON.stringify(queue));
-          setOfflineQueue(queue);
-        }
-      }
-      setSuccessMsg('¡Listo! Se marcaron todos los estudiantes como Presentes.');
-      loadData();
-      setTimeout(() => setSuccessMsg(null), 3000);
-    } catch (e: any) {
-      setError('Error al marcar asistencia masiva');
-    } finally {
-      setSaving(null);
-    }
-  };
-
   function sanitizeFilename(name: string): string {
     return name
       .normalize('NFD')
@@ -479,17 +448,31 @@ export function Attendance() {
       .replace(/^_|_$/g, '');
   }
 
-  const exportAttendanceCSV = () => {
+  const exportAttendanceExcel = () => {
     if (!students || students.length === 0) return;
     const courseName = courses.find((c) => c.id === courseId)?.name || 'Curso';
     const cleanCourseName = sanitizeFilename(courseName);
 
-    let csvContent = 'REPORTE OFICIAL DE ASISTENCIA Y AUSENCIAS MEP - CINDEA\n';
-    csvContent += `Nivel / Grupo:;${courseName}\n`;
-    csvContent += `Fecha de Generación:;${new Date().toLocaleDateString('es-CR')}\n\n`;
-    csvContent += 'Estudiante;Cédula;Lecciones Impartidas;Lecciones Asistidas;Ausencias Injustificadas;Ausencias Justificadas;Tardías;% Asistencia;Puntos MEP (de 10)\n';
+    const rows: (string | number)[][] = [
+      ['EDUNUBE DOCENTE — CONTROL DE ASISTENCIA Y AUSENCIAS MEP'],
+      ['Nivel / Grupo:', courseName, '', 'Fecha de Emisión:', new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' })],
+      ['Docente:', user?.fullName ? `Prof. ${user.fullName}` : 'Docente de Inglés', '', 'Año Lectivo:', '2026'],
+      [],
+      [
+        'N°',
+        'Cédula / DIMEX',
+        'Nombre Completo del Estudiante',
+        'Lecciones Impartidas',
+        'Lecciones Asistidas',
+        'Ausencias Injustificadas',
+        'Ausencias Justificadas',
+        'Tardías',
+        '% Asistencia',
+        'Puntos MEP (de 10)',
+      ],
+    ];
 
-    students.forEach((st) => {
+    students.forEach((st, idx) => {
       const sum = summary[st.id] || {
         totalLessonsTaught: 0,
         presentLessons: 0,
@@ -501,22 +484,40 @@ export function Attendance() {
       };
       const totalLessons = sum.totalLessonsTaught || 0;
       const present = sum.presentLessons ?? 0;
-      const points = ((sum.calculatedAttendanceScore ?? 100) / 10).toFixed(1);
-      const percent = totalLessons > 0 ? (sum.attendancePercentage ?? 100).toFixed(1) : '100.0';
+      const points = Number(((sum.calculatedAttendanceScore ?? 100) / 10).toFixed(1));
+      const percent = totalLessons > 0 ? `${(sum.attendancePercentage ?? 100).toFixed(1)}%` : '100.0%';
 
-      csvContent += `"${st.fullName}";"${st.studentNumber || ''}";${totalLessons};${present};${sum.unexcusedAbsences};${sum.excusedAbsences};${sum.unexcusedTardies};${percent}%;${points}\n`;
+      rows.push([
+        idx + 1,
+        st.studentNumber || '—',
+        st.fullName,
+        totalLessons,
+        present,
+        sum.unexcusedAbsences,
+        sum.excusedAbsences,
+        sum.unexcusedTardies,
+        percent,
+        points,
+      ]);
     });
 
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Asistencia_MEP_${cleanCourseName}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 6 },
+      { wch: 18 },
+      { wch: 36 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 22 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 20 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Asistencia MEP');
+    XLSX.writeFile(wb, `Asistencia_MEP_${cleanCourseName}.xlsx`);
   };
 
   // Agrupar historial por fechas
@@ -526,83 +527,76 @@ export function Attendance() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Principal Limpio & Profesional */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-        {/* Banner de Sincronización SOLO SI está Offline o hay pendientes */}
-        {(!isOnline || offlineQueue.length > 0) && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl border text-xs bg-amber-50/80 border-amber-200 text-amber-950 animate-in fade-in">
-            <div className="flex items-center gap-2 font-medium">
-              <WifiOff className="w-4 h-4 text-amber-700 shrink-0" />
-              <span>
-                <strong>Modo Offline:</strong> {offlineQueue.length} asistencia(s) guardada(s) localmente en este dispositivo.
-              </span>
-            </div>
-            {isOnline && offlineQueue.length > 0 && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={syncOfflineRecords}
-                disabled={syncingOffline}
-                className="text-[11px] font-bold border-amber-300 bg-white text-amber-900 hover:bg-amber-100 shadow-2xs"
-              >
-                <RefreshCw className={cn('w-3 h-3 mr-1 text-amber-700', syncingOffline && 'animate-spin')} />
-                {syncingOffline ? 'Sincronizando...' : 'Sincronizar Ahora'}
-              </Button>
-            )}
+      {/* Banner de Sincronización SOLO SI está Offline o hay pendientes */}
+      {(!isOnline || offlineQueue.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border text-xs bg-amber-50/80 border-amber-200 text-amber-950 animate-in fade-in">
+          <div className="flex items-center gap-2 font-medium">
+            <WifiOff className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              <strong>Modo Offline:</strong> {offlineQueue.length} asistencia(s) guardada(s) localmente en este dispositivo.
+            </span>
           </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                Control de Asistencia
-              </h1>
-              {isOnline && (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Cloud Sync
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Registro diario por lección con rebajo automático en Trabajo Cotidiano (SICIN / MEP).
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          {isOnline && offlineQueue.length > 0 && (
             <Button
               variant="secondary"
               size="sm"
-              onClick={exportAttendanceCSV}
-              className="text-xs font-semibold border-slate-200 hover:bg-slate-50"
+              onClick={syncOfflineRecords}
+              disabled={syncingOffline}
+              className="text-[11px] font-bold border-amber-300 bg-white text-amber-900 hover:bg-amber-100 shadow-2xs cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
-              Excel
+              <RefreshCw className={cn('w-3 h-3 mr-1 text-amber-700', syncingOffline && 'animate-spin')} />
+              {syncingOffline ? 'Sincronizando...' : 'Sincronizar Ahora'}
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={markAllPresent}
-              disabled={saving === 'all'}
-              className="bg-emerald-600 hover:bg-emerald-700 font-bold text-xs shadow-xs"
-            >
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
-              {saving === 'all' ? 'Guardando...' : 'Marcar Todos Presentes'}
-            </Button>
-          </div>
+          )}
+        </div>
+      )}
+
+      {/* 1. Header Minimalista & Botones Coquetos */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <CalendarCheck className="w-6 h-6 text-blue-600 shrink-0" />
+            <span>Control de Asistencia</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Registro diario de lecciones y cálculo de asistencia SICIN / MEP
+          </p>
         </div>
 
-        {/* Barra de Filtros Compacta */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Grupo / Nivel:
-            </label>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setOpenPreviewModal(true)}
+            disabled={students.length === 0}
+            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+          >
+            <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" />
+            Acta PDF
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportAttendanceExcel}
+            disabled={students.length === 0}
+            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 cursor-pointer shadow-2xs"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+            Descargar Excel (.xlsx)
+          </Button>
+        </div>
+      </div>
+
+      {/* 2. Barra de Filtro Compacta y Resumen Rápido */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-3.5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Grupo:</span>
             <select
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
             >
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -612,26 +606,22 @@ export function Attendance() {
             </select>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Fecha de Clase:
-            </label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Fecha:</span>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-bold text-slate-600 mb-1">
-              Bloque de Lecciones:
-            </label>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Bloque:</span>
             <select
               value={lessonsCount}
               onChange={(e) => setLessonsCount(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none"
             >
               <option value="1">1 Lección (40 min)</option>
               <option value="2">2 Lecciones (80 min)</option>
@@ -640,24 +630,44 @@ export function Attendance() {
             </select>
           </div>
         </div>
+
+        {/* Resumen del Día en Píldoras */}
+        <div className="flex items-center gap-2 shrink-0 overflow-x-auto">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
+            <Users className="w-3.5 h-3.5 text-slate-500" />
+            <span>{students.length} alumnos</span>
+          </span>
+
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-100">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>{presentCount} Presentes</span>
+          </span>
+
+          {absentCount > 0 && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 text-xs font-bold border border-rose-100">
+              <XCircle className="w-3.5 h-3.5 text-rose-600" />
+              <span>{absentCount} Ausentes</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {successMsg && (
-        <div className="p-3 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl flex items-center gap-2 shadow-xs">
+        <div className="p-3 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl flex items-center gap-2 shadow-2xs">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
-      {/* 2. Pestañas Limpias y Modernas */}
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-200 pb-2">
+      {/* 3. Pestañas Limpias */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
         <button
           onClick={() => setActiveTab('daily')}
           className={cn(
-            'px-3.5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5',
+            'px-3.5 py-1.5 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer',
             activeTab === 'daily'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           )}
         >
@@ -668,9 +678,9 @@ export function Attendance() {
         <button
           onClick={() => setActiveTab('history')}
           className={cn(
-            'px-3.5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5',
+            'px-3.5 py-1.5 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer',
             activeTab === 'history'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           )}
         >
@@ -681,9 +691,9 @@ export function Attendance() {
         <button
           onClick={() => setActiveTab('summary')}
           className={cn(
-            'px-3.5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5',
+            'px-3.5 py-1.5 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer',
             activeTab === 'summary'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           )}
         >
@@ -694,9 +704,9 @@ export function Attendance() {
         <button
           onClick={() => setActiveTab('justifications')}
           className={cn(
-            'px-3.5 py-2 text-xs font-bold rounded-xl transition flex items-center gap-1.5',
+            'px-3.5 py-1.5 text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer',
             activeTab === 'justifications'
-              ? 'bg-blue-600 text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-2xs'
               : 'text-slate-600 hover:bg-slate-100'
           )}
         >
@@ -710,48 +720,34 @@ export function Attendance() {
         </button>
       </div>
 
-      {/* 3. Contenido: Lista Diaria de Estudiantes */}
+      {/* 4. Contenido: Lista Diaria de Estudiantes (Coqueta y Compacta) */}
       {activeTab === 'daily' && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1 text-xs">
-            <span className="font-semibold text-slate-600">
-              Fecha: <strong className="text-slate-900">{date}</strong> • {lessonsCount} lecciones
-            </span>
-            <div className="flex items-center gap-2 font-bold text-xs">
-              <span className="text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                {presentCount} Presentes
-              </span>
-              <span className="text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-lg border border-rose-200">
-                {absentCount} Ausentes
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2.5">
-            {students.map((st, index) => {
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-2">
+            {students.map((st) => {
               const currentRecord = recordFor(st.id);
               const currentStatus = currentRecord?.status || 'present';
 
               return (
                 <div
                   key={st.id}
-                  className="rounded-2xl border border-slate-200/90 bg-white p-3.5 sm:p-4 shadow-2xs hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                  className="rounded-2xl border border-slate-200/90 bg-white px-3.5 py-2.5 shadow-2xs hover:border-slate-300 transition flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0">
-                      {index + 1}
+                    <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0">
+                      {st.fullName.charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 truncate">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate leading-tight">
                         {st.fullName}
                       </h3>
-                      <p className="text-[11px] text-slate-500 font-mono">
-                        Cédula: {st.studentNumber || 'Sin registrar'}
+                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {st.studentNumber || 'Cédula no registrada'}
                       </p>
                     </div>
                   </div>
 
-                  {/* Botones Grandes de Asistencia (4 Estados MEP) */}
+                  {/* Botones de Asistencia Coquetos & Compactos */}
                   <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                     {STATUS_CONFIG.map((cfg) => {
                       const isSelected = currentStatus === cfg.value;
@@ -761,7 +757,7 @@ export function Attendance() {
                           onClick={() => setStatus(st.id, cfg.value)}
                           disabled={saving === st.id}
                           className={cn(
-                            'px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1',
+                            'px-2.5 py-1 rounded-xl text-xs font-bold border transition-all flex items-center gap-1 cursor-pointer',
                             isSelected ? cfg.activeColor : cfg.color
                           )}
                         >
@@ -780,9 +776,9 @@ export function Attendance() {
 
       {/* 4. Contenido: Bitácora por Fechas / Día a Día */}
       {activeTab === 'history' && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900">
+            <h3 className="text-sm font-bold text-slate-900">
               📅 Historial de Clases y Asistencias Día por Día
             </h3>
             <p className="text-xs text-slate-500">
@@ -790,15 +786,15 @@ export function Attendance() {
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             {uniqueDates.map((d) => {
               const dayRecords = allRecords.filter((r) => r.date === d);
               const totalLessonsDay = dayRecords[0]?.lessonsCount || 2;
               return (
-                <div key={d} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200/60 pb-2">
+                <div key={d} className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200/60 pb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-blue-900 bg-blue-100/80 px-2.5 py-1 rounded-lg">
+                      <span className="text-xs font-extrabold text-blue-900 bg-blue-100/80 px-2.5 py-0.5 rounded-lg">
                         {d}
                       </span>
                       <span className="text-xs font-semibold text-slate-600">
@@ -811,7 +807,7 @@ export function Attendance() {
                         setLessonsCount(totalLessonsDay);
                         setActiveTab('daily');
                       }}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-bold self-start sm:self-auto"
+                      className="text-xs text-blue-600 hover:text-blue-800 font-bold self-start sm:self-auto cursor-pointer"
                     >
                       ✏️ Editar lista de este día
                     </button>
@@ -826,10 +822,10 @@ export function Attendance() {
                       const isLate = status === 'late' || status === 'late_unexcused';
 
                       return (
-                        <div key={st.id} className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
+                        <div key={st.id} className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between text-xs">
                           <span className="font-semibold text-slate-800 truncate max-w-[140px]">{st.fullName}</span>
                           <span className={cn(
-                            'font-bold px-2 py-0.5 rounded text-[11px]',
+                            'font-bold px-2 py-0.5 rounded text-[10px]',
                             isAbsent && 'bg-rose-100 text-rose-800',
                             isExcused && 'bg-blue-100 text-blue-800',
                             isLate && 'bg-amber-100 text-amber-800',
@@ -847,19 +843,19 @@ export function Attendance() {
 
             {uniqueDates.length === 0 && (
               <div className="p-8 text-center text-slate-500 text-xs">
-                Aún no hay fechas registradas. Pasa lista en la pestaña "Pasar Lista Hoy".
+                Aún no hay fechas registradas. Pasa lista en la pestaña "Pasar Lista".
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* 5. Contenido: Resumen Acumulado del Periodo (Ausencias vs Lecciones) */}
+      {/* 5. Contenido: Resumen Acumulado del Periodo */}
       {activeTab === 'summary' && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="text-base font-bold text-slate-900">
+              <h3 className="text-sm font-bold text-slate-900">
                 Puntaje Oficial de Asistencia MEP (Valor: 10%)
               </h3>
               <p className="text-xs text-slate-500">
@@ -870,34 +866,35 @@ export function Attendance() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={exportAttendanceCSV}
-                className="text-xs font-bold"
+                onClick={exportAttendanceExcel}
+                className="text-xs font-bold cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 mr-1" />
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                 Descargar Excel
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setOpenPreviewModal(true)}
-                className="text-xs font-bold bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100"
+                className="text-xs font-bold bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100 cursor-pointer"
               >
-                📄 Ver Documento Oficial MEP / PDF
+                <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" />
+                Acta MEP / PDF
               </Button>
             </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs font-bold uppercase text-slate-500 border-b border-slate-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-[11px] font-extrabold uppercase text-slate-500 border-b border-slate-200">
                 <tr>
-                  <th className="py-3 px-4">Estudiante</th>
-                  <th className="py-3 px-3 text-center">Lecciones Impartidas</th>
-                  <th className="py-3 px-3 text-center">Ausencias Injustificadas</th>
-                  <th className="py-3 px-3 text-center">Aus. Justif.</th>
-                  <th className="py-3 px-3 text-center">Tardías</th>
-                  <th className="py-3 px-3 text-center">% Asistencia</th>
-                  <th className="py-3 px-4 text-right">Puntos MEP (de 10)</th>
+                  <th className="py-2.5 px-3.5">Estudiante</th>
+                  <th className="py-2.5 px-3 text-center">Lecciones Impartidas</th>
+                  <th className="py-2.5 px-3 text-center">Ausencias Injustificadas</th>
+                  <th className="py-2.5 px-3 text-center">Aus. Justif.</th>
+                  <th className="py-2.5 px-3 text-center">Tardías</th>
+                  <th className="py-2.5 px-3 text-center">% Asistencia</th>
+                  <th className="py-2.5 px-3.5 text-right">Puntos MEP (de 10)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -920,30 +917,24 @@ export function Attendance() {
                   const points = ((sum.calculatedAttendanceScore ?? 100) / 10).toFixed(1);
 
                   return (
-                    <tr key={st.id} className="hover:bg-slate-50/60">
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900">{st.fullName}</div>
-                        <div className="text-xs text-slate-500 font-mono">{st.studentNumber}</div>
+                    <tr key={st.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-2 px-3.5">
+                        <div className="font-bold text-slate-900 text-xs">{st.fullName}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{st.studentNumber}</div>
                       </td>
-                      <td className="py-3 px-3 text-center font-bold text-slate-700">
-                        {totalLessons} lecciones
+                      <td className="py-2 px-3 text-center font-bold text-slate-700">
+                        {totalLessons}
                       </td>
-                      <td className="py-3 px-3 text-center">
-                        <span className={cn(
-                          'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg font-extrabold text-xs',
-                          sum.unexcusedAbsences > 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-50 text-emerald-800'
-                        )}>
-                          {sum.unexcusedAbsences} {sum.unexcusedAbsences === 1 ? 'lección' : 'lecciones'}
-                          <span className="text-[10px] font-normal text-slate-500">({sum.unexcusedAbsences} de {totalLessons})</span>
-                        </span>
+                      <td className="py-2 px-3 text-center font-semibold text-rose-600">
+                        {sum.unexcusedAbsences}
                       </td>
-                      <td className="py-3 px-3 text-center text-blue-600 font-semibold">
+                      <td className="py-2 px-3 text-center text-blue-600 font-semibold">
                         {sum.excusedAbsences}
                       </td>
-                      <td className="py-3 px-3 text-center text-amber-600 font-semibold">
+                      <td className="py-2 px-3 text-center text-amber-600 font-semibold">
                         {sum.unexcusedTardies}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="py-2 px-3 text-center">
                         <span className={cn(
                           'font-extrabold text-xs px-2 py-0.5 rounded',
                           Number(percent) >= 80 ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50'
@@ -951,8 +942,8 @@ export function Attendance() {
                           {percent}%
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <span className="inline-block px-3 py-1 rounded-lg bg-blue-50 text-blue-900 font-black text-sm border border-blue-200 shadow-2xs">
+                      <td className="py-2 px-3.5 text-right">
+                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-blue-50 text-blue-900 font-black text-xs border border-blue-200 shadow-2xs">
                           {points} / 10.0 pts
                         </span>
                       </td>
@@ -965,28 +956,26 @@ export function Attendance() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 4. TAB DE JUSTIFICACIONES Y COMPROBANTES DE AUSENCIA */}
-      {/* ========================================================================= */}
+      {/* 6. TAB DE JUSTIFICACIONES */}
       {activeTab === 'justifications' && (
         <div className="space-y-4">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-4 sm:p-5 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Paperclip className="w-5 h-5 text-amber-600" />
-                  <span>Comprobantes y Justificaciones de Ausencia Enviadas por Alumnos</span>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Paperclip className="w-4 h-4 text-amber-600" />
+                  <span>Comprobantes y Justificaciones de Ausencia</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Revisa los certificados médicos de la CCSS o constancias laborales enviadas por los estudiantes. Al aprobar, el sistema marca automáticamente la ausencia como <strong>Justificada (0 puntos rebajados)</strong> en el registro oficial.
+                  Revisa los certificados médicos de la CCSS o constancias laborales enviadas por los estudiantes.
                 </p>
               </div>
 
               <div className="flex items-center gap-2 text-xs">
-                <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-200">
+                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-200">
                   {justifications.filter((j) => j.status === 'pending').length} Pendientes
                 </span>
-                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 font-bold border border-emerald-200">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-bold border border-emerald-200">
                   {justifications.filter((j) => j.status === 'approved').length} Aprobadas
                 </span>
               </div>
@@ -1264,7 +1253,7 @@ export function Attendance() {
             <div className="meta-grid">
               <div className="meta-row">
                 <span className="meta-label">Docente:</span>
-                <span className="meta-val">{user?.fullName ? `Prof. ${user.fullName}` : 'Teacher Diana'}</span>
+                <span className="meta-val">{user?.fullName ? `Prof. ${user.fullName}` : 'Docente de Inglés'}</span>
               </div>
               <div className="meta-row">
                 <span className="meta-label">Año Lectivo:</span>
@@ -1335,7 +1324,7 @@ export function Attendance() {
             {/* Pie de página con paginación */}
             <div className="report-footer">
               <span>EduNube Docente • Reporte de Asistencia</span>
-              <span>Generado por: <strong>{user?.fullName ? `Prof. ${user.fullName}` : 'Teacher Diana'}</strong></span>
+              <span>Generado por: <strong>{user?.fullName ? `Prof. ${user.fullName}` : 'Docente de Inglés'}</strong></span>
               <span className="page-box">
                 Página 1 / 1
               </span>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { Button } from '../components/Button';
-import { Input, Select } from '../components/Input';
+import { Select } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { coursesService } from '../services/courses.service';
 import { studentsService } from '../services/students.service';
@@ -27,9 +27,7 @@ import {
   LogOut,
   ChevronRight,
   Languages,
-  Mic,
   Send,
-  User,
   Paperclip,
   UploadCloud,
   Eye,
@@ -42,6 +40,66 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '../utils';
+import { alerts } from '../utils/alerts';
+
+export interface AttachedFileItem {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  data: string;
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+const processFiles = async (
+  fileList: FileList | File[],
+  currentList: AttachedFileItem[]
+): Promise<AttachedFileItem[]> => {
+  const updated: AttachedFileItem[] = [...currentList];
+  const filesArray = Array.from(fileList);
+
+  for (const file of filesArray) {
+    const MAX_BYTES = 15 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      alerts.warning(
+        'Archivo demasiado grande',
+        `El archivo "${file.name}" pesa ${(file.size / (1024 * 1024)).toFixed(1)} MB. El tamaño máximo por archivo es de 15 MB.`
+      );
+      continue;
+    }
+
+    if (updated.some((item) => item.name === file.name && item.size === file.size)) {
+      continue;
+    }
+
+    const data = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      if (file.name.toLowerCase().endsWith('.txt')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+
+    updated.push({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/octet-stream',
+      data,
+    });
+  }
+
+  return updated;
+};
 
 // Estudiante Demo por defecto en CINDEA
 interface StudentProfile {
@@ -66,34 +124,45 @@ const DEMO_STUDENTS: StudentProfile[] = [
   },
 ];
 
-const DAILY_ENGLISH_TIPS = [
-  {
-    idiom: 'Piece of cake 🍰',
-    meaning: 'Algo muy fácil de hacer.',
-    example: '"Don’t worry about the English exam, it’s a piece of cake if you practice!"',
-  },
-  {
-    idiom: 'Hit the books 📚',
-    meaning: 'Ponerse a estudiar con entusiasmo.',
-    example: '"I have my CINDEA English test tomorrow, so I need to hit the books tonight."',
-  },
-  {
-    idiom: 'Break a leg! 🎭',
-    meaning: '¡Buena suerte! (Se usa antes de una presentación o prueba).',
-    example: '"Break a leg on your English oral dialogue today!"',
-  },
-];
+const STUDENT_PROFILE_KEY = 'student_portal_profile';
+const STUDENT_COURSE_KEY = 'student_selected_course';
+
+function getInitialStudentProfile(authUser: any): StudentProfile {
+  try {
+    const cached = localStorage.getItem(STUDENT_PROFILE_KEY);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.id) return parsed;
+    }
+  } catch {}
+
+  if (authUser) {
+    return {
+      id: authUser.id,
+      name: authUser.fullName || 'Estudiante CINDEA',
+      carnet: (authUser.email && !authUser.email.includes('@') ? authUser.email : authUser.email?.split('@')[0]) || '501230456',
+      age: 20,
+      isMinor: false,
+      guardianName: 'Contacto Principal',
+      moduleName: 'Inglés CINDEA',
+    };
+  }
+
+  return DEMO_STUDENTS[0];
+}
 
 export function StudentPortal() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'assignments' | 'grades' | 'tutor' | 'justifications'>('dashboard');
   
-  // Perfil del estudiante activo
-  const [currentStudent, setCurrentStudent] = useState<StudentProfile>(DEMO_STUDENTS[0]);
+  // Perfil del estudiante activo con persistencia inmediata
+  const [currentStudent, setCurrentStudent] = useState<StudentProfile>(() => getInitialStudentProfile(user));
 
   const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>(() => {
+    return localStorage.getItem(STUDENT_COURSE_KEY) || '';
+  });
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [myGrades, setMyGrades] = useState<Grade[]>([]);
@@ -104,9 +173,7 @@ export function StudentPortal() {
   const [myJustifications, setMyJustifications] = useState<Justification[]>([]);
   const [justAbsenceDate, setJustAbsenceDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [justReason, setJustReason] = useState<string>('');
-  const [justFileName, setJustFileName] = useState<string>('');
-  const [justFileData, setJustFileData] = useState<string>('');
-  const [justFileType, setJustFileType] = useState<string>('');
+  const [justFiles, setJustFiles] = useState<AttachedFileItem[]>([]);
   const [justSubmitting, setJustSubmitting] = useState<boolean>(false);
   const [justSuccess, setJustSuccess] = useState<string | null>(null);
   const [justError, setJustError] = useState<string | null>(null);
@@ -114,18 +181,29 @@ export function StudentPortal() {
 
   useEffect(() => {
     if (user) {
-      // Buscar información del estudiante en la base de datos
+      // Sincronizar inmediatamente datos básicos del usuario
+      const fallbackProfile: StudentProfile = {
+        id: user.id,
+        name: user.fullName || 'Estudiante CINDEA',
+        carnet: (user.email && !user.email.includes('@') ? user.email : user.email?.split('@')[0]) || '501230456',
+        age: 20,
+        isMinor: false,
+        guardianName: 'Contacto Principal',
+        moduleName: 'Inglés CINDEA',
+      };
+
+      // Buscar información detallada del estudiante en la base de datos
       studentsService.list().then((allStudents) => {
         const found = allStudents.find(
           (s) =>
             s.userId === user.id ||
             s.id === user.id ||
-            s.fullName?.toLowerCase() === user.fullName?.toLowerCase() ||
+            (s.fullName && user.fullName && s.fullName.toLowerCase().trim() === user.fullName.toLowerCase().trim()) ||
             (s.studentNumber && user.email && s.studentNumber === user.email)
         );
 
         if (found) {
-          setCurrentStudent({
+          const profile: StudentProfile = {
             id: found.id,
             name: found.fullName || user.fullName || 'Estudiante',
             carnet: found.studentNumber || user.email || 'Sin cédula',
@@ -133,43 +211,45 @@ export function StudentPortal() {
             isMinor: false,
             guardianName: found.guardianName || 'Contacto Principal',
             moduleName: found.gradeLevel || 'Inglés CINDEA',
-          });
+          };
+          setCurrentStudent(profile);
+          try {
+            localStorage.setItem(STUDENT_PROFILE_KEY, JSON.stringify(profile));
+          } catch {}
           if (found.courseId) {
             setSelectedCourseId(found.courseId);
+            try {
+              localStorage.setItem(STUDENT_COURSE_KEY, found.courseId);
+            } catch {}
           }
         } else {
-          // Estudiante creado recientemente o logueado directamente
-          setCurrentStudent({
-            id: user.id,
-            name: user.fullName || 'Estudiante CINDEA',
-            carnet: (user.email && !user.email.includes('@') ? user.email : user.email?.split('@')[0]) || '501230456',
-            age: 20,
-            isMinor: false,
-            guardianName: 'Contacto Principal',
-            moduleName: 'Inglés CINDEA',
+          setCurrentStudent((prev) => {
+            const next = prev.id && prev.id !== DEMO_STUDENTS[0].id ? prev : fallbackProfile;
+            try {
+              localStorage.setItem(STUDENT_PROFILE_KEY, JSON.stringify(next));
+            } catch {}
+            return next;
           });
         }
       }).catch(() => {
-        setCurrentStudent({
-          id: user.id,
-          name: user.fullName || 'Estudiante CINDEA',
-          carnet: (user.email && !user.email.includes('@') ? user.email : user.email?.split('@')[0]) || '501230456',
-          age: 20,
-          isMinor: false,
-          guardianName: 'Contacto Principal',
-          moduleName: 'Inglés CINDEA',
+        setCurrentStudent((prev) => {
+          const next = prev.id && prev.id !== DEMO_STUDENTS[0].id ? prev : fallbackProfile;
+          try {
+            localStorage.setItem(STUDENT_PROFILE_KEY, JSON.stringify(next));
+          } catch {}
+          return next;
         });
       });
     }
   }, [user]);
 
-  // Subida de tarea
+  // Subida de tarea (Soporta múltiples archivos: fotos, PDF, Word, audios)
   const [selectedTask, setSelectedTask] = useState<Assignment | null>(null);
-  const [uploadFileName, setUploadFileName] = useState('');
-  const [uploadFileType, setUploadFileType] = useState<'pdf' | 'docx' | 'audio'>('pdf');
-  const [uploadFileContent, setUploadFileContent] = useState<string>('');
+  const [uploadFiles, setUploadFiles] = useState<AttachedFileItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [isDraggingSubmission, setIsDraggingSubmission] = useState(false);
+  const [isDraggingJust, setIsDraggingJust] = useState(false);
 
   // Tutor IA
   const [tutorQuestion, setTutorQuestion] = useState('');
@@ -180,9 +260,6 @@ export function StudentPortal() {
     },
   ]);
   const [tutorLoading, setTutorLoading] = useState(false);
-
-  // Tip del día
-  const dailyTip = DAILY_ENGLISH_TIPS[0];
 
   useEffect(() => {
     coursesService.list().then((cs) => {
@@ -257,6 +334,32 @@ export function StudentPortal() {
     const activeCourse = courses.find((c) => c.id === selectedCourseId);
 
     try {
+      const isMulti = justFiles.length > 1;
+      const combinedName = justFiles.length > 0
+        ? isMulti
+          ? `${justFiles.length} comprobantes: ${justFiles.map((f) => f.name).join(', ')}`
+          : justFiles[0].name
+        : undefined;
+      const combinedType = justFiles.length > 0
+        ? isMulti
+          ? 'application/json+multi'
+          : justFiles[0].type
+        : undefined;
+      const fileDataPayload = justFiles.length > 0
+        ? isMulti
+          ? JSON.stringify({
+              isMulti: true,
+              totalFiles: justFiles.length,
+              files: justFiles.map((f) => ({
+                name: f.name,
+                size: f.size,
+                type: f.type,
+                data: f.data,
+              })),
+            })
+          : justFiles[0].data
+        : undefined;
+
       await justificationsService.create({
         studentId: currentStudent.id,
         studentName: currentStudent.name,
@@ -265,16 +368,14 @@ export function StudentPortal() {
         courseName: activeCourse?.name || 'Inglés CINDEA',
         absenceDate: justAbsenceDate,
         reason: justReason.trim(),
-        fileName: justFileName || undefined,
-        fileType: justFileType || undefined,
-        fileData: justFileData || undefined,
+        fileName: combinedName,
+        fileType: combinedType,
+        fileData: fileDataPayload,
       });
 
-      setJustSuccess('¡Comprobante enviado exitosamente! La profesora Diana recibirá la notificación en su panel para validarlo.');
+      setJustSuccess('¡Comprobante(s) enviado(s) exitosamente! La docente recibirá la notificación en su panel para validarlo.');
       setJustReason('');
-      setJustFileName('');
-      setJustFileData('');
-      setJustFileType('');
+      setJustFiles([]);
       
       // Recargar lista
       justificationsService.list({ studentId: currentStudent.id }).then(setMyJustifications).catch(() => {});
@@ -349,27 +450,49 @@ export function StudentPortal() {
 
   const myGradeSummary = calculateMyFinalGrade();
 
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-
   const handleUploadAssignment = async (e: FormEvent) => {
     e.preventDefault();
-    if (!selectedTask || !uploadFileName) return;
+    if (!selectedTask || uploadFiles.length === 0) {
+      alerts.warning('Falta archivo', 'Por favor selecciona o arrastra al menos un archivo antes de confirmar la entrega.');
+      return;
+    }
     setUploading(true);
     setUploadSuccess(null);
     try {
+      const isMulti = uploadFiles.length > 1;
+      const combinedName = isMulti
+        ? `${uploadFiles.length} archivos: ${uploadFiles.map((f) => f.name).join(', ')}`
+        : uploadFiles[0].name;
+      const combinedSize = uploadFiles.reduce((acc, f) => acc + f.size, 0);
+      const fileDataPayload = isMulti
+        ? JSON.stringify({
+            isMulti: true,
+            totalFiles: uploadFiles.length,
+            files: uploadFiles.map((f) => ({
+              name: f.name,
+              size: f.size,
+              type: f.type,
+              data: f.data,
+            })),
+          })
+        : uploadFiles[0].data;
+
       await assignmentsService.submitAssignment({
         assignmentId: selectedTask.id,
         studentId: currentStudent.id,
-        fileName: uploadFileName,
-        fileSize: uploadFile?.size || 1024 * 50,
-        fileData: uploadFileContent,
+        fileName: combinedName,
+        fileSize: combinedSize,
+        fileData: fileDataPayload,
       });
-      setUploadSuccess(`¡Tu trabajo "${uploadFileName}" se ha entregado y guardado en Google Drive con éxito!`);
+
+      setUploadSuccess(
+        isMulti
+          ? `¡Tus ${uploadFiles.length} archivos se han entregado y guardado en Google Drive con éxito!`
+          : `¡Tu trabajo "${uploadFiles[0].name}" se ha entregado y guardado en Google Drive con éxito!`
+      );
       setTimeout(() => {
         setSelectedTask(null);
-        setUploadFileName('');
-        setUploadFileContent('');
-        setUploadFile(null);
+        setUploadFiles([]);
         setUploadSuccess(null);
         loadStudentData();
       }, 2500);
@@ -580,23 +703,20 @@ export function StudentPortal() {
               <div>
                 <span className="md:hidden font-bold text-blue-900 text-base">Portal Estudiantil</span>
                 <div className="hidden sm:block text-xs font-medium text-slate-500">
-                  Centro Integrado de Educación de Adultos (CINDEA) • Cañas, Guanacaste
+                  Centro Integrado de Educación de Adultos (CINDEA) · MEP
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="hidden lg:flex items-center gap-2 text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
-                <User className="w-3.5 h-3.5 text-blue-600" />
-                <span>{currentStudent.name}</span>
-                <span className="text-slate-300">•</span>
-                <span className="font-mono">{currentStudent.carnet}</span>
-              </div>
-
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={async () => {
+                  try {
+                    localStorage.removeItem(STUDENT_PROFILE_KEY);
+                    localStorage.removeItem(STUDENT_COURSE_KEY);
+                  } catch {}
                   await logout();
                   window.location.href = '/login';
                 }}
@@ -695,147 +815,237 @@ export function StudentPortal() {
 
           {/* CONTENIDO PRINCIPAL */}
           <main className="p-6 md:p-8 space-y-6 max-w-7xl">
-        {/* Grado / Materia Activa CINDEA */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-          <div>
-            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Mi Grado Matriculado en CINDEA</span>
-            <h2 className="text-base font-extrabold text-slate-900 flex items-center gap-2 mt-0.5">
-              <GraduationCap className="w-5 h-5 text-blue-600" />
-              {currentCourse?.name || courses[0]?.name || 'Cargando grado...'}
-            </h2>
-          </div>
-          {courses.length > 1 ? (
-            <div className="w-72">
-              <Select
-                label=""
-                name="courseSelect"
-                value={selectedCourseId}
-                onChange={(e) => setSelectedCourseId(e.target.value)}
-                options={courses.map((c) => ({ value: c.id, label: c.name }))}
-              />
-            </div>
-          ) : (
-            <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Matrícula Oficial y Acceso Autorizado</span>
-            </div>
-          )}
-        </div>
+            {/* 1. SECCIÓN: DASHBOARD GENERAL */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-6">
+                {/* 1. Encabezado Ejecutivo y Limpio (Estilo Docente) */}
+                <div className="rounded-3xl bg-slate-900 border border-slate-800 p-6 md:p-8 text-white shadow-xs">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-xs font-semibold text-blue-300">
+                        <Languages className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Portal Estudiantil · CINDEA MEP 2026</span>
+                      </div>
+                      <h1 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
+                        <span>¡Hola, {currentStudent.name.split(' ')[0]}!</span>
+                        <span className="text-xl font-normal">👋</span>
+                      </h1>
+                      <p className="text-xs md:text-sm text-slate-300 flex items-center gap-2 flex-wrap">
+                        <span className="text-blue-300 font-medium">{currentCourse?.name || 'Inglés CINDEA'}</span>
+                        <span className="text-slate-600">•</span>
+                        <span>Cédula / Carné: <strong className="font-mono text-white">{currentStudent.carnet}</strong></span>
+                      </p>
+                    </div>
 
-        {/* 1. SECCIÓN: DASHBOARD GENERAL */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            {/* Banner de Bienvenida CINDEA */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-900 via-blue-900 to-slate-900 p-6 md:p-8 text-white shadow-md">
-              <div className="relative z-10 max-w-2xl space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-xs font-semibold text-blue-200 border border-blue-400/30">
-                  <Languages className="w-3.5 h-3.5 text-amber-300" />
-                  Teacher de Inglés • CINDEA 2026
+                    {courses.length > 1 && (
+                      <div className="w-64 shrink-0">
+                        <Select
+                          label=""
+                          name="courseSelect"
+                          value={selectedCourseId}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSelectedCourseId(val);
+                            try {
+                              localStorage.setItem(STUDENT_COURSE_KEY, val);
+                            } catch {}
+                          }}
+                          options={courses.map((c) => ({ value: c.id, label: c.name }))}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-black">
-                  Welcome back, {currentStudent.name.split(' ')[0]}! 👋
-                </h1>
-                <p className="text-xs md:text-sm text-blue-100 leading-relaxed">
-                  Aquí tienes tu espacio personal para revisar consignas de inglés, entregar tareas en cualquier formato
-                  (Word, PDF o audios de voz) y consultar tus notas de forma 100% privada.
-                </p>
 
-                {/* Estado y Cédula del Estudiante */}
-                <div className="pt-2">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-400/40 text-[11px] text-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
-                    <span>Estudiante activo CINDEA • Cédula: <strong>{currentStudent.carnet}</strong> • Acceso 100% privado</span>
+                {/* 3 Tarjetas de Resumen KPI Minimalistas */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Tareas */}
+                  <div
+                    onClick={() => setActiveTab('assignments')}
+                    className="cursor-pointer bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-blue-300 hover:shadow-xs transition group flex items-center justify-between"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-slate-500">Tareas & Entregas</span>
+                      <div className="text-2xl font-black text-slate-900">{assignments.length}</div>
+                      <span className="text-[11px] text-blue-600 font-medium group-hover:underline flex items-center gap-1">
+                        Ver actividades <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                    <div className="h-11 w-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                      <FileEdit className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Promedio Ponderado MEP */}
+                  <div
+                    onClick={() => setActiveTab('grades')}
+                    className="cursor-pointer bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-emerald-300 hover:shadow-xs transition group flex items-center justify-between"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-slate-500">Promedio MEP</span>
+                      <div className="text-2xl font-black font-mono text-slate-900">
+                        {myGradeSummary.totalScore} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                      </div>
+                      <span
+                        className={cn(
+                          'inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border',
+                          myGradeSummary.status === 'APROBADO'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : myGradeSummary.status === 'EN CURSO'
+                            ? 'bg-blue-50 text-blue-700 border-blue-200'
+                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                        )}
+                      >
+                        {myGradeSummary.status}
+                      </span>
+                    </div>
+                    <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                  </div>
+
+                  {/* Asistencia SICIN */}
+                  <div
+                    onClick={() => setActiveTab('justifications')}
+                    className="cursor-pointer bg-white p-5 rounded-2xl border border-slate-200/90 shadow-2xs hover:border-amber-300 hover:shadow-xs transition group flex items-center justify-between"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-slate-500">Asistencia (10%)</span>
+                      <div className="text-2xl font-black font-mono text-slate-900">
+                        {myGradeSummary.asistenciaScore} <span className="text-xs font-normal text-slate-400">/ 10 pts</span>
+                      </div>
+                      <span className="text-[11px] text-amber-700 font-medium group-hover:underline flex items-center gap-1">
+                        {myJustifications.length} comprobante(s) <ChevronRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                    <div className="h-11 w-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                      <Paperclip className="w-5 h-5" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grid de 2 Columnas: Tareas Activas y Avisos/Idiom */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  {/* Columna Izquierda: Tareas Recientes (7 cols) */}
+                  <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <FolderCheck className="w-4 h-4 text-blue-600" />
+                        <h2 className="text-sm font-bold text-slate-900">Tareas del Módulo</h2>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('assignments')}
+                        className="text-xs text-blue-600 hover:underline font-semibold"
+                      >
+                        Ver todas
+                      </button>
+                    </div>
+
+                    {assignments.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-slate-400">
+                        No hay tareas asignadas por el momento.
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {assignments.slice(0, 3).map((a) => {
+                          const mySub = submissions.find((s) => s.assignmentId === a.id);
+                          const myGrade = myGrades.find((g) => g.assignmentId === a.id);
+
+                          return (
+                            <div
+                              key={a.id}
+                              className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition flex items-center justify-between gap-3 text-xs"
+                            >
+                              <div className="min-w-0 space-y-0.5">
+                                <div className="font-bold text-slate-900 truncate">{a.title}</div>
+                                <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                                  <span>{a.category || 'Tarea'}</span>
+                                  <span>•</span>
+                                  <span>{a.maxScore} pts</span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0">
+                                {myGrade ? (
+                                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                    Nota: {myGrade.score}/{myGrade.maxScore}
+                                  </span>
+                                ) : mySub ? (
+                                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    ✓ Entregado
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab('assignments');
+                                      setSelectedTask(a);
+                                    }}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition"
+                                  >
+                                    Entregar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Columna Derecha: Avisos Oficiales y Tutor Virtual (5 cols) */}
+                  <div className="lg:col-span-5 space-y-4">
+                    {/* Avisos Oficiales */}
+                    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5 text-xs font-bold text-slate-900">
+                        <MessageCircle className="w-4 h-4 text-blue-600" />
+                        <span>Avisos & Comunicados</span>
+                      </div>
+                      {announcements.length === 0 ? (
+                        <div className="text-center py-5 text-xs text-slate-400">
+                          No hay avisos recientes de la docente.
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {announcements.slice(0, 3).map((ann) => (
+                            <div key={ann.id} className="py-2.5 space-y-1 text-xs">
+                              <div className="font-bold text-slate-900">{ann.title}</div>
+                              <p className="text-slate-600 text-[11px] line-clamp-3 leading-relaxed">{ann.content}</p>
+                              <div className="text-[10px] text-slate-400 font-mono">
+                                {new Date(ann.createdAt).toLocaleDateString('es-CR')} • {ann.sentBy || 'Docente'}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Acceso Rápido al Tutor IA */}
+                    <div
+                      onClick={() => setActiveTab('tutor')}
+                      className="bg-indigo-50/70 border border-indigo-200/80 rounded-2xl p-4 cursor-pointer hover:border-indigo-300 hover:bg-indigo-50 transition shadow-2xs space-y-2 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-xs font-bold text-indigo-950">
+                          <Bot className="w-4 h-4 text-indigo-600" />
+                          <span>English AI Tutor</span>
+                        </div>
+                        <span className="text-[11px] font-bold text-indigo-600 group-hover:translate-x-0.5 transition flex items-center gap-0.5">
+                          Abrir chat <ChevronRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-indigo-900 leading-snug">
+                        ¿Tienes dudas con vocabulario, gramática o redacción de tu tarea? Consulta con tu tutor 24/7.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Tarjetas de Resumen KPI Privado */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div
-                onClick={() => setActiveTab('assignments')}
-                className="cursor-pointer rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:border-blue-300 hover:shadow-md transition space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                  <span>Tareas Activas</span>
-                  <FileEdit className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="text-3xl font-black text-slate-900">{assignments.length}</div>
-                <div className="text-xs text-blue-600 font-medium flex items-center gap-1">
-                  Ver entregas y consignas <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveTab('grades')}
-                className="cursor-pointer rounded-xl border border-slate-200 bg-white p-5 shadow-xs hover:border-emerald-300 hover:shadow-md transition space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500 uppercase">
-                  <span>Mi Promedio Actual MEP</span>
-                  <GraduationCap className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div className="text-3xl font-black text-slate-900">{myGradeSummary.totalScore} / 100</div>
-                <div className="text-xs text-emerald-700 font-extrabold flex items-center gap-1">
-                  Estado: {myGradeSummary.status} <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-
-              <div
-                onClick={() => setActiveTab('tutor')}
-                className="cursor-pointer rounded-xl border border-indigo-200 bg-indigo-50/50 p-5 shadow-xs hover:border-indigo-300 hover:shadow-md transition space-y-2"
-              >
-                <div className="flex items-center justify-between text-xs font-bold text-indigo-900 uppercase">
-                  <span>English AI Tutor</span>
-                  <Bot className="w-4 h-4 text-indigo-600" />
-                </div>
-                <div className="text-xs text-indigo-950 font-semibold leading-relaxed">
-                  ¿Dudas con pasado simple, verbos o pronunciación?
-                </div>
-                <div className="text-xs text-indigo-600 font-bold flex items-center gap-1">
-                  Preguntar al tutor inteligente <ChevronRight className="w-3.5 h-3.5" />
-                </div>
-              </div>
-            </div>
-
-            {/* Daily English Expression Booster */}
-            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-5 shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-xs font-extrabold text-amber-900 uppercase">
-                <Sparkles className="w-4 h-4 text-amber-600" />
-                Daily English Expression (Frase del Día CINDEA)
-              </div>
-              <div className="text-base font-black text-slate-900">{dailyTip.idiom}</div>
-              <p className="text-xs text-slate-700 font-medium"><strong>Significado:</strong> {dailyTip.meaning}</p>
-              <div className="text-xs text-slate-600 bg-white/80 p-2.5 rounded-lg border border-amber-200/80 font-serif italic">
-                {dailyTip.example}
-              </div>
-            </div>
-
-            {/* Comunicados Recientes de Teacher Diana */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-blue-600" />
-                Avisos y Comunicados de Teacher Diana
-              </h3>
-              {announcements.length === 0 ? (
-                <div className="text-xs text-slate-500 py-3">No hay avisos recientes.</div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {announcements.map((ann) => (
-                    <div key={ann.id} className="py-3 space-y-1">
-                      <div className="text-xs font-bold text-slate-900">{ann.title}</div>
-                      <p className="text-xs text-slate-600 whitespace-pre-line">{ann.content}</p>
-                      <div className="text-[10px] text-slate-400">
-                        {new Date(ann.createdAt).toLocaleDateString('es-CR')} • {ann.sentBy}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 2. SECCIÓN: TAREAS & ENTREGAS (MY ASSIGNMENTS) */}
+            {/* 2. SECCIÓN: TAREAS & ENTREGAS (MY ASSIGNMENTS) */}
         {activeTab === 'assignments' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -1055,7 +1265,7 @@ export function StudentPortal() {
                               size="sm"
                               onClick={() => {
                                 setSelectedTask(a);
-                                setUploadFileName(mySub.fileName);
+                                setUploadFiles([]);
                               }}
                               className="w-full text-xs font-bold border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100"
                             >
@@ -1074,7 +1284,7 @@ export function StudentPortal() {
                             size="sm"
                             onClick={() => {
                               setSelectedTask(a);
-                              setUploadFileName('');
+                              setUploadFiles([]);
                             }}
                             className="w-full text-xs font-bold bg-blue-600 hover:bg-blue-700"
                           >
@@ -1098,30 +1308,34 @@ export function StudentPortal() {
         {/* 3. SECCIÓN: MIS CALIFICACIONES PRIVADAS (MY GRADES) */}
         {activeTab === 'grades' && (
           <div className="space-y-6">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Cabecera Limpia */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-4">
               <div>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Boletín Privado del Estudiante
-                </span>
-                <h2 className="text-lg font-bold text-slate-900">
-                  Calificaciones de {currentStudent.name}
-                </h2>
+                <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-blue-600" />
+                  <span>Calificaciones & Rendimiento</span>
+                </h1>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Carné: <strong>{currentStudent.carnet}</strong> • {currentStudent.moduleName}
+                  Desglose oficial de rubros evaluativos y promedio ponderado MEP.
                 </p>
               </div>
 
-              <div className="text-right bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <div className="text-xs text-slate-500">Promedio Ponderado Final MEP</div>
-                <div className="text-2xl font-black font-mono text-slate-900">{myGradeSummary.totalScore} / 100</div>
+              {/* Píldora de Promedio Ponderado */}
+              <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-2xs">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Promedio Final</div>
+                  <div className="text-xl font-black font-mono text-slate-900">
+                    {myGradeSummary.totalScore} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                  </div>
+                </div>
                 <span
                   className={cn(
-                    'inline-block px-2.5 py-0.5 rounded text-[11px] font-extrabold mt-1 border',
+                    'px-2.5 py-1 rounded-full text-xs font-bold border',
                     myGradeSummary.status === 'APROBADO'
-                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                       : myGradeSummary.status === 'EN CURSO'
-                      ? 'bg-blue-100 text-blue-800 border-blue-300'
-                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                      ? 'bg-blue-50 text-blue-700 border-blue-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
                   )}
                 >
                   {myGradeSummary.status}
@@ -1129,60 +1343,81 @@ export function StudentPortal() {
               </div>
             </div>
 
-            {/* Desglose Oficial de Componentes MEP */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-xs">
-                <div className="text-xs text-slate-500 font-bold uppercase">Cotidiano (50%)</div>
-                <div className="text-2xl font-black font-mono text-slate-900 mt-1">{myGradeSummary.cotidianoAvg}</div>
-                <div className="text-[11px] text-slate-400">Oral Practice & Classwork</div>
+            {/* 4 Tarjetas KPI de Componentes MEP */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 text-center shadow-2xs space-y-1">
+                <div className="text-xs text-slate-500 font-bold">Cotidiano (50%)</div>
+                <div className="text-2xl font-black font-mono text-slate-900">
+                  {myGradeSummary.cotidianoAvg} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium">
+                  {((myGradeSummary.cotidianoAvg * 0.5)).toFixed(1)} / 50 pts
+                </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-xs">
-                <div className="text-xs text-slate-500 font-bold uppercase">Pruebas (30%)</div>
-                <div className="text-2xl font-black font-mono text-slate-900 mt-1">{myGradeSummary.pruebasAvg}</div>
-                <div className="text-[11px] text-slate-400">Exámenes Parciales</div>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 text-center shadow-2xs space-y-1">
+                <div className="text-xs text-slate-500 font-bold">Pruebas (30%)</div>
+                <div className="text-2xl font-black font-mono text-slate-900">
+                  {myGradeSummary.pruebasAvg} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium">
+                  {((myGradeSummary.pruebasAvg * 0.3)).toFixed(1)} / 30 pts
+                </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-xs">
-                <div className="text-xs text-slate-500 font-bold uppercase">Tareas (10%)</div>
-                <div className="text-2xl font-black font-mono text-slate-900 mt-1">{myGradeSummary.tareasAvg}</div>
-                <div className="text-[11px] text-slate-400">Reading Essays & Audios</div>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 text-center shadow-2xs space-y-1">
+                <div className="text-xs text-slate-500 font-bold">Tareas (10%)</div>
+                <div className="text-2xl font-black font-mono text-slate-900">
+                  {myGradeSummary.tareasAvg} <span className="text-xs font-normal text-slate-400">/ 100</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium">
+                  {((myGradeSummary.tareasAvg * 0.1)).toFixed(1)} / 10 pts
+                </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white p-4 text-center shadow-xs">
-                <div className="text-xs text-slate-500 font-bold uppercase">Asistencia SICIN (10%)</div>
-                <div className="text-2xl font-black font-mono text-blue-700 mt-1">{myGradeSummary.asistenciaScore}</div>
-                <div className="text-[11px] text-slate-400">Rebajo por ausencias aplicado</div>
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 text-center shadow-2xs space-y-1">
+                <div className="text-xs text-slate-500 font-bold">Asistencia (10%)</div>
+                <div className="text-2xl font-black font-mono text-blue-700">
+                  {myGradeSummary.asistenciaScore} <span className="text-xs font-normal text-slate-400">%</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-medium">
+                  {((myGradeSummary.asistenciaScore * 0.1)).toFixed(1)} / 10 pts
+                </div>
               </div>
             </div>
 
             {/* Detalle de Evaluaciones Registradas */}
-            <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-              <div className="p-4 bg-slate-50 border-b border-slate-200 font-bold text-xs text-slate-700">
-                Detalle Individual de Evaluaciones Recibidas (Solo visibles para ti)
+            <div className="rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden">
+              <div className="p-4 border-b border-slate-100 font-bold text-xs text-slate-900 flex items-center justify-between">
+                <span>Evaluaciones Registradas</span>
+                <span className="text-slate-400 font-normal">{myGrades.length} registro(s)</span>
               </div>
 
               {myGrades.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-500">
-                  Aún no tienes calificaciones registradas en este período.
+                <div className="p-10 text-center text-xs text-slate-400 space-y-1">
+                  <p>Aún no tienes calificaciones registradas en este período.</p>
+                  <p className="text-[11px] text-slate-400">Las notas aparecerán aquí tan pronto la docente califique tus entregas y pruebas.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
                   {myGrades.map((g) => (
-                    <div key={g.id} className="p-4 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-bold text-sm text-slate-900">{g.title}</div>
-                        <div className="text-xs text-blue-600 font-medium">{g.category}</div>
+                    <div key={g.id} className="p-4 flex items-center justify-between gap-4 text-xs hover:bg-slate-50/60 transition">
+                      <div className="space-y-1">
+                        <div className="font-bold text-slate-900 text-sm">{g.title}</div>
+                        <div className="text-blue-600 font-medium text-[11px] flex items-center gap-2">
+                          <span>{g.category}</span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-400">Calificado el {g.gradedOn}</span>
+                        </div>
                         {g.notes && (
-                          <div className="text-xs text-slate-600 bg-slate-50 p-2 rounded border mt-1.5 font-serif italic">
-                            Teacher Feedback: "{g.notes}"
+                          <div className="text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs italic mt-1">
+                            "{g.notes}"
                           </div>
                         )}
-                        <div className="text-[10px] text-slate-400 mt-1">Calificado el: {g.gradedOn}</div>
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-lg font-black font-mono px-3 py-1 bg-slate-100 rounded-lg border text-slate-900">
+                        <span className="text-base font-black font-mono px-3 py-1.5 bg-slate-100 rounded-xl border border-slate-200 text-slate-900">
                           {g.score} / {g.maxScore}
                         </span>
                       </div>
@@ -1228,7 +1463,7 @@ export function StudentPortal() {
                       )}
                     >
                       <span className="text-[10px] font-bold opacity-75 mb-0.5">
-                        {msg.sender === 'user' ? 'Tú (Pedro)' : 'English AI Tutor'}
+                        {msg.sender === 'user' ? `Tú (${currentStudent.name.split(' ')[0]})` : 'English AI Tutor'}
                       </span>
                       <p className="whitespace-pre-line">{msg.text}</p>
                     </div>
@@ -1298,74 +1533,66 @@ export function StudentPortal() {
         {/* ========================================================================= */}
         {/* TAB 5: JUSTIFICACIONES Y COMPROBANTES DE AUSENCIA */}
         {/* ========================================================================= */}
+        {/* 4. SECCIÓN: COMPROBANTES DE AUSENCIA */}
         {activeTab === 'justifications' && (
           <div className="space-y-6">
-            {/* Banner informativo */}
-            <div className="bg-gradient-to-r from-amber-600 via-amber-700 to-amber-800 text-white rounded-2xl p-6 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="space-y-1 max-w-2xl">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold text-amber-100">
-                  <Paperclip className="w-3.5 h-3.5" />
-                  <span>Comprobantes de Ausencia CINDEA / MEP</span>
-                </div>
-                <h2 className="text-xl font-bold">Envío de Justificaciones Médicas y Laborales</h2>
-                <p className="text-xs text-amber-100 leading-relaxed">
-                  Sube fotos o archivos PDF de comprobantes de la CCSS, constancias de trabajo u otros justificantes. La profesora Diana revisará tu documento y, al aprobarlo, tu ausencia quedará formalmente justificada en el sistema sin rebajo de puntos.
+            {/* Cabecera Limpia sin Ruido Visual */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200/80 pb-4">
+              <div>
+                <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <Paperclip className="w-5 h-5 text-amber-600" />
+                  <span>Comprobantes de Ausencia</span>
+                </h1>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Envía constancias médicas de la CCSS o laborales para justificar lecciones sin rebajo de asistencia.
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Formulario de subida de justificante */}
-              <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
+              {/* Formulario de subida de justificante (5 cols) */}
+              <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <UploadCloud className="w-5 h-5 text-amber-600" />
-                  <h3 className="text-sm font-bold text-slate-900">Subir Nueva Justificación</h3>
+                  <UploadCloud className="w-4 h-4 text-amber-600" />
+                  <h2 className="text-sm font-bold text-slate-900">Subir Justificación</h2>
                 </div>
 
-                <form onSubmit={handleSendJustification} className="space-y-4 text-xs">
+                <form onSubmit={handleSendJustification} className="space-y-3.5 text-xs">
                   {justError && (
-                    <div className="p-3 bg-rose-50 text-rose-800 rounded-xl border border-rose-200 flex items-center gap-2">
+                    <div className="p-3 bg-rose-50 text-rose-800 rounded-xl border border-rose-200 flex items-center gap-2 text-xs">
                       <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                       <span>{justError}</span>
                     </div>
                   )}
 
                   {justSuccess && (
-                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-2">
+                    <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 flex items-center gap-2 text-xs">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>{justSuccess}</span>
                     </div>
                   )}
 
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Módulo / Curso:</label>
-                    <Select
-                      options={courses.map((c) => ({ value: c.id, label: c.name }))}
-                      value={selectedCourseId}
-                      onChange={(e) => setSelectedCourseId(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Aviso Normativo MEP sobre 8 días */}
-                  <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-[11px] text-blue-900 flex items-start gap-2">
-                    <Clock3 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  {courses.length > 1 && (
                     <div>
-                      <strong>Normativa de Evaluación MEP (Reglamento Oficial):</strong>
-                      <p className="text-blue-800 text-[10px] mt-0.5">
-                        El plazo máximo para presentar y justificar una ausencia es de <strong>8 días naturales</strong> contados a partir de la fecha en que se ausentó. Documentos posteriores a 8 días quedan invalidados por reglamento.
-                      </p>
+                      <label className="block font-semibold text-slate-700 mb-1">Módulo / Curso:</label>
+                      <Select
+                        options={courses.map((c) => ({ value: c.id, label: c.name }))}
+                        value={selectedCourseId}
+                        onChange={(e) => setSelectedCourseId(e.target.value)}
+                      />
                     </div>
-                  </div>
+                  )}
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Fecha de la Ausencia (Últimos 8 días):
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-slate-700">Fecha de la Ausencia:</label>
+                      <span className="text-[10px] text-slate-400">Plazo máx. 8 días</span>
+                    </div>
                     <input
                       type="date"
                       min={getAbsenceDateBounds().min}
                       max={getAbsenceDateBounds().max}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:border-amber-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-slate-50/50"
                       value={justAbsenceDate}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -1375,7 +1602,7 @@ export function StudentPortal() {
                           const now = new Date();
                           const diff = Math.floor((now.getTime() - selected.getTime()) / (1000 * 60 * 60 * 24));
                           if (diff > 8) {
-                            setJustError(`⚠️ Plazo vencido: Han pasado ${diff} días desde esta fecha. El límite reglamentario del MEP es de 8 días.`);
+                            setJustError(`⚠️ Plazo vencido: Han pasado ${diff} días desde esta fecha. El límite del MEP es de 8 días naturales.`);
                           } else {
                             setJustError(null);
                           }
@@ -1383,17 +1610,14 @@ export function StudentPortal() {
                       }}
                       required
                     />
-                    <span className="text-[10px] text-slate-400 mt-1 block">
-                      Rango permitido: Desde el {getAbsenceDateBounds().min} hasta hoy ({getAbsenceDateBounds().max}).
-                    </span>
                   </div>
 
                   <div>
-                    <label className="block font-semibold text-slate-700 mb-1">Motivo o Explicación:</label>
+                    <label className="block font-semibold text-slate-700 mb-1">Motivo o Justificación:</label>
                     <textarea
-                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs focus:border-amber-500 focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none bg-slate-50/50"
                       rows={3}
-                      placeholder="Ej. Cita médica en la CCSS / Dictamen médico / Motivo laboral justificable..."
+                      placeholder="Ej. Cita médica en la CCSS / Dictamen médico / Motivo laboral..."
                       value={justReason}
                       onChange={(e) => setJustReason(e.target.value)}
                       required
@@ -1401,60 +1625,105 @@ export function StudentPortal() {
                   </div>
 
                   {/* Selector y subida de archivo / foto */}
-                  <div>
-                    <label className="block font-semibold text-slate-700 mb-1">
-                      Foto o Documento de Respaldo (PDF, JPG, PNG):
-                    </label>
-                    <label className="border-2 border-dashed border-amber-300 hover:border-amber-500 rounded-xl p-4 text-center space-y-2 bg-amber-50/40 hover:bg-amber-50 cursor-pointer transition block">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Comprobante(s) Médico / Fotografía(s) {justFiles.length > 0 && `(${justFiles.length})`}:
+                      </label>
+                      {justFiles.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setJustFiles([])}
+                          className="text-[11px] text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                        >
+                          <X className="w-3 h-3" /> Quitar todos
+                        </button>
+                      )}
+                    </div>
+
+                    {justFiles.length > 0 && (
+                      <div className="space-y-2 max-h-40 overflow-y-auto mb-2">
+                        {justFiles.map((file) => (
+                          <div key={file.id} className="p-2 bg-amber-50/80 rounded-xl border border-amber-200 flex items-center justify-between text-xs gap-3">
+                            <div className="flex items-center gap-2 truncate font-semibold text-slate-900">
+                              {file.data.startsWith('data:image/') ? (
+                                <img src={file.data} alt={file.name} className="w-7 h-7 object-cover rounded-md border border-amber-300 shrink-0" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                              )}
+                              <div className="truncate">
+                                <div className="truncate text-slate-900">{file.name}</div>
+                                <div className="text-[10px] text-slate-400 font-normal">{formatFileSize(file.size)}</div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setJustFiles((prev) => prev.filter((f) => f.id !== file.id))}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                              title="Quitar este archivo"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <label
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingJust(true);
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingJust(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingJust(false);
+                      }}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingJust(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                          const updated = await processFiles(e.dataTransfer.files, justFiles);
+                          setJustFiles(updated);
+                        }
+                      }}
+                      className={cn(
+                        'border-2 border-dashed rounded-2xl p-4 text-center space-y-1.5 cursor-pointer transition block group',
+                        isDraggingJust
+                          ? 'border-amber-500 bg-amber-100/80 scale-[1.01] ring-4 ring-amber-200'
+                          : 'border-slate-300 hover:border-amber-500 bg-slate-50/60 hover:bg-amber-50/40'
+                      )}
+                    >
                       <input
                         type="file"
+                        multiple
                         className="hidden"
                         accept="image/*,application/pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setJustFileName(file.name);
-                            setJustFileType(file.type || 'application/octet-stream');
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              setJustFileData(reader.result as string);
-                            };
-                            reader.readAsDataURL(file);
+                        onChange={async (e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            const updated = await processFiles(e.target.files, justFiles);
+                            setJustFiles(updated);
+                            e.target.value = '';
                           }
                         }}
                       />
-                      {justFileData ? (
-                        <div className="space-y-1.5">
-                          {justFileType.startsWith('image/') ? (
-                            <img
-                              src={justFileData}
-                              alt="Preview"
-                              className="w-24 h-24 object-cover mx-auto rounded-lg border border-amber-300 shadow-2xs"
-                            />
-                          ) : (
-                            <FileText className="w-10 h-10 text-amber-600 mx-auto" />
-                          )}
-                          <div className="font-bold text-amber-900 truncate max-w-xs mx-auto">
-                            {justFileName}
-                          </div>
-                          <div className="text-[11px] text-amber-700">
-                            ✓ Archivo listo para enviar
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          <div className="flex justify-center gap-2 text-amber-600">
-                            <Camera className="w-6 h-6" />
-                            <UploadCloud className="w-6 h-6" />
-                          </div>
-                          <div className="font-bold text-slate-700">
-                            Tomar foto o seleccionar archivo
-                          </div>
-                          <div className="text-[11px] text-slate-400">
-                            Comprobante médico CCSS, boleta o PDF
-                          </div>
-                        </div>
-                      )}
+                      <div className="flex justify-center gap-2 text-amber-600">
+                        <Camera className="w-5 h-5 text-slate-400 group-hover:text-amber-600 transition" />
+                        <UploadCloud className={cn('w-5 h-5 text-slate-400 group-hover:text-amber-600 transition', isDraggingJust && 'animate-bounce text-amber-600')} />
+                      </div>
+                      <div className="font-bold text-slate-700 text-xs">
+                        {justFiles.length > 0 ? '+ Adjuntar más fotos o comprobantes' : 'Tomar foto(s), arrastrar o seleccionar archivos'}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Puedes subir múltiples fotos o comprobantes CCSS / PDF (Máx. 15 MB c/u)
+                      </div>
                     </label>
                   </div>
 
@@ -1520,7 +1789,7 @@ export function StudentPortal() {
                           {/* Comentario de la docente */}
                           {j.teacherComment && (
                             <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 text-[11px]">
-                              <strong>Respuesta de Teacher Diana:</strong> {j.teacherComment}
+                              <strong>Respuesta de la Docente:</strong> {j.teacherComment}
                             </div>
                           )}
 
@@ -1591,8 +1860,43 @@ export function StudentPortal() {
               <div><strong>Motivo:</strong> {selectedJustificationDoc.reason}</div>
             </div>
 
-            <div className="border border-slate-200 rounded-xl p-2 bg-slate-100 text-center max-h-96 overflow-y-auto">
-              {selectedJustificationDoc.fileType?.startsWith('image/') || selectedJustificationDoc.fileData?.startsWith('data:image/') ? (
+            <div className="border border-slate-200 rounded-xl p-3 bg-slate-100 text-center max-h-96 overflow-y-auto space-y-3">
+              {selectedJustificationDoc.fileData && selectedJustificationDoc.fileData.startsWith('{"isMulti":true') ? (
+                (() => {
+                  try {
+                    const parsed = JSON.parse(selectedJustificationDoc.fileData);
+                    const files: any[] = parsed.files || [];
+                    return (
+                      <div className="space-y-3 text-left">
+                        <div className="text-xs font-bold text-slate-700">
+                          Comprobantes adjuntos ({files.length}):
+                        </div>
+                        <div className="grid grid-cols-1 gap-2.5">
+                          {files.map((file, idx) => (
+                            <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-slate-800 truncate">{file.name}</span>
+                                <a
+                                  href={file.data}
+                                  download={file.name}
+                                  className="text-[10px] font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded border border-blue-200 shadow-2xs"
+                                >
+                                  📥 Descargar
+                                </a>
+                              </div>
+                              {file.data && file.data.startsWith('data:image/') && (
+                                <img src={file.data} alt={file.name} className="max-h-60 mx-auto rounded shadow-sm border border-slate-200" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  } catch (_) {
+                    return <div>Comprobantes listos.</div>;
+                  }
+                })()
+              ) : selectedJustificationDoc.fileType?.startsWith('image/') || selectedJustificationDoc.fileData?.startsWith('data:image/') ? (
                 <img
                   src={selectedJustificationDoc.fileData}
                   alt="Comprobante de Ausencia"
@@ -1630,14 +1934,14 @@ export function StudentPortal() {
         )}
       </Modal>
 
-      {/* MODAL DE ENTREGA O MODIFICACIÓN DE TAREA */}
+      {/* MODAL DE SUBIDA Y ENTREGA DE ASIGNACIÓN */}
       <Modal
         open={selectedTask !== null}
         title={
           selectedTask
             ? submissions.some((s) => s.assignmentId === selectedTask.id)
-              ? `✏️ Modificar / Reemplazar Entrega: ${selectedTask.title}`
-              : `📤 Entregar Asignación: ${selectedTask.title}`
+              ? `Reemplazar Entrega: ${selectedTask.title}`
+              : `Entregar Asignación: ${selectedTask.title}`
             : 'Entregar Asignación'
         }
         onClose={() => setSelectedTask(null)}
@@ -1646,61 +1950,29 @@ export function StudentPortal() {
             <Button variant="secondary" type="button" onClick={() => setSelectedTask(null)}>
               Cancelar
             </Button>
-            <Button type="submit" form="student-upload-form" disabled={uploading}>
+            <Button type="submit" form="student-upload-form" disabled={uploading || uploadFiles.length === 0}>
               {uploading
                 ? 'Guardando en la Nube / Drive...'
                 : selectedTask && submissions.some((s) => s.assignmentId === selectedTask.id)
-                ? 'Reemplazar Archivo en Drive'
+                ? 'Reemplazar Archivo(s)'
                 : 'Confirmar y Subir Entrega'}
             </Button>
           </>
         }
       >
         <form id="student-upload-form" onSubmit={handleUploadAssignment} className="space-y-4">
-          <div className="text-xs text-slate-700 bg-blue-50 p-3 rounded-lg border border-blue-200 leading-relaxed">
-            <strong>Instrucciones de Teacher Diana:</strong> {selectedTask?.description}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-slate-700">Tipo de Archivo a Entregar</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setUploadFileType('docx')}
-                className={cn(
-                  'p-2 rounded-lg border text-xs font-bold flex flex-col items-center gap-1',
-                  uploadFileType === 'docx' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200'
-                )}
-              >
-                <FileText className="w-4 h-4" />
-                Word / DOCX
-              </button>
-              <button
-                type="button"
-                onClick={() => setUploadFileType('pdf')}
-                className={cn(
-                  'p-2 rounded-lg border text-xs font-bold flex flex-col items-center gap-1',
-                  uploadFileType === 'pdf' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-200'
-                )}
-              >
-                <FileText className="w-4 h-4 text-rose-500" />
-                PDF Document
-              </button>
-              <button
-                type="button"
-                onClick={() => setUploadFileType('audio')}
-                className={cn(
-                  'p-2 rounded-lg border text-xs font-bold flex flex-col items-center gap-1',
-                  uploadFileType === 'audio' ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-slate-200'
-                )}
-              >
-                <Mic className="w-4 h-4 text-purple-600" />
-                Grabación Audio
-              </button>
+          {/* Instrucciones de la docente (solo si existen) */}
+          {selectedTask?.description && selectedTask.description.trim().length > 0 && (
+            <div className="text-xs text-slate-700 bg-blue-50/80 p-3.5 rounded-xl border border-blue-200/80 leading-relaxed space-y-1">
+              <div className="font-bold text-blue-950 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span>Instrucciones de la Docente:</span>
+              </div>
+              <p className="text-slate-700">{selectedTask.description}</p>
             </div>
-          </div>
+          )}
 
-          {/* Guía de la docente si existe */}
+          {/* Guía de la docente si existe adjunto */}
           {selectedTask?.attachmentName && (
             <div className="p-3 bg-indigo-50/80 rounded-xl border border-indigo-200/80 flex items-center justify-between text-xs text-indigo-950">
               <span className="truncate font-semibold flex items-center gap-1.5 text-[11px]">
@@ -1731,55 +2003,113 @@ export function StudentPortal() {
             </div>
           )}
 
-          <Input
-            label="Nombre del Archivo"
-            placeholder={
-              uploadFileType === 'audio'
-                ? 'Ej. Speaking_Task1_PamelaLeiva.mp3'
-                : 'Ej. Essay_Task1_PamelaLeiva.docx'
-            }
-            value={uploadFileName}
-            onChange={(e) => setUploadFileName(e.target.value)}
-            required
-          />
+          {/* Lista de archivos adjuntos y Dropzone Drag & Drop */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700">
+                Archivos de la Entrega {uploadFiles.length > 0 && `(${uploadFiles.length})`}:
+              </label>
+              {uploadFiles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setUploadFiles([])}
+                  className="text-[11px] text-rose-600 hover:underline flex items-center gap-0.5 cursor-pointer font-medium"
+                >
+                  <X className="w-3 h-3" /> Quitar todos
+                </button>
+              )}
+            </div>
 
-          <label className="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl p-6 text-center space-y-2 bg-slate-50 hover:bg-blue-50/40 cursor-pointer transition block">
-            <input
-              type="file"
-              className="hidden"
-              accept=".pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.jpg,.jpeg,.png,.txt"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  setUploadFile(file);
-                  setUploadFileName(file.name);
-                  if (file.name.match(/\.(mp3|wav|m4a|ogg)$/i)) setUploadFileType('audio');
-                  else if (file.name.match(/\.pdf$/i)) setUploadFileType('pdf');
-                  else setUploadFileType('docx');
+            {uploadFiles.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {uploadFiles.map((file) => (
+                  <div key={file.id} className="p-2.5 bg-blue-50/80 rounded-xl border border-blue-200 flex items-center justify-between text-xs gap-3">
+                    <div className="flex items-center gap-2.5 truncate text-blue-950 font-semibold">
+                      {file.data.startsWith('data:image/') ? (
+                        <img src={file.data} alt={file.name} className="w-7 h-7 object-cover rounded-md border border-blue-300 shrink-0" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                      )}
+                      <div className="truncate">
+                        <div className="truncate text-slate-900">{file.name}</div>
+                        <div className="text-[10px] text-slate-400 font-normal">{formatFileSize(file.size)}</div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setUploadFiles((prev) => prev.filter((f) => f.id !== file.id))}
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                      title="Quitar este archivo"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    setUploadFileContent(reader.result as string);
-                  };
-                  if (file.name.toLowerCase().endsWith('.txt')) {
-                    reader.readAsText(file);
-                  } else {
-                    reader.readAsDataURL(file);
-                  }
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingSubmission(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingSubmission(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingSubmission(false);
+              }}
+              onDrop={async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDraggingSubmission(false);
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  const updated = await processFiles(e.dataTransfer.files, uploadFiles);
+                  setUploadFiles(updated);
                 }
               }}
-            />
-            <FolderUp className="w-8 h-8 text-blue-500 mx-auto" />
-            <div className="text-xs font-semibold text-slate-700">
-              {uploadFileName ? `Archivo seleccionado: ${uploadFileName}` : 'Haz clic para seleccionar tu archivo de tu computadora / celular'}
-            </div>
-            <div className="text-[11px] text-slate-400">
-              Formatos aceptados: DOCX, PDF, JPG, PNG, MP3, M4A (Almacenamiento Cloud CINDEA)
-            </div>
-          </label>
+              className={cn(
+                'border-2 border-dashed rounded-2xl p-5 text-center space-y-2 cursor-pointer transition block group',
+                isDraggingSubmission
+                  ? 'border-blue-500 bg-blue-100/70 scale-[1.01] ring-4 ring-blue-200'
+                  : 'border-slate-300 hover:border-blue-500 bg-slate-50/60 hover:bg-blue-50/40'
+              )}
+            >
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                accept=".pdf,.doc,.docx,.mp3,.wav,.m4a,.ogg,.jpg,.jpeg,.png,.txt,.zip,.rar"
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    const updated = await processFiles(e.target.files, uploadFiles);
+                    setUploadFiles(updated);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <FolderUp
+                className={cn(
+                  'w-6 h-6 mx-auto transition',
+                  isDraggingSubmission ? 'text-blue-600 animate-bounce' : 'text-slate-400 group-hover:text-blue-600'
+                )}
+              />
+              <div className="text-xs font-bold text-slate-700">
+                {uploadFiles.length > 0 ? '+ Adjuntar más archivos o fotos' : 'Arrastra tus archivos aquí o haz clic para seleccionar'}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Puedes subir varios archivos (Word, PDF, Fotos, Audio MP3/M4A, ZIP) · Máx. 15 MB c/u
+              </div>
+            </label>
+          </div>
 
           {uploadSuccess && (
-            <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-lg border border-emerald-200 flex items-center gap-2">
+            <div className="p-3 bg-emerald-50 text-emerald-800 text-xs rounded-2xl border border-emerald-200 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>{uploadSuccess}</span>
             </div>

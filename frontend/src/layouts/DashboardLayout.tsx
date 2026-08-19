@@ -25,15 +25,15 @@ import {
 
 const navItems = [
   { to: '/dashboard', label: 'Inicio', icon: Home },
-  { to: '/courses', label: 'Grupos y Sedes', icon: Layers },
-  { to: '/attendance', label: 'Pasar Asistencia', icon: CalendarCheck },
-  { to: '/grades', label: 'Calificaciones MEP', icon: GraduationCap },
-  { to: '/assignments', label: 'Tareas y Entregas', icon: FolderCheck },
-  { to: '/calendar', label: 'Google Calendar', icon: Calendar },
-  { to: '/planning', label: 'Planeamiento & Cloud', icon: BookOpen },
-  { to: '/students', label: 'Mis Estudiantes', icon: Users },
-  { to: '/announcements', label: 'Avisos & WhatsApp', icon: MessageCircle },
-  { to: '/ai-assistant', label: 'Asistente de Redacción', icon: Sparkles },
+  { to: '/courses', label: 'Grupos', icon: Layers },
+  { to: '/attendance', label: 'Asistencia', icon: CalendarCheck },
+  { to: '/assignments', label: 'Tareas', icon: FolderCheck },
+  { to: '/grades', label: 'Calificaciones', icon: GraduationCap },
+  { to: '/students', label: 'Estudiantes', icon: Users },
+  { to: '/planning', label: 'Planeamiento', icon: BookOpen },
+  { to: '/calendar', label: 'Calendario', icon: Calendar },
+  { to: '/announcements', label: 'Comunicados', icon: MessageCircle },
+  { to: '/ai-assistant', label: 'Asistente IA', icon: Sparkles },
 ];
 
 export function DashboardLayout() {
@@ -76,14 +76,14 @@ export function DashboardLayout() {
         {/* ========================================================= */}
         <aside
           className={cn(
-            'hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out select-none relative z-30',
+            'hidden md:flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ease-in-out select-none sticky top-0 h-screen z-30 shrink-0',
             collapsed ? 'w-20' : 'w-64'
           )}
         >
           {/* Header del Sidebar */}
           <div
             className={cn(
-              'border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center min-h-[73px] transition-all duration-200',
+              'border-b border-slate-100 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white flex items-center min-h-[73px] shrink-0 transition-all duration-200',
               collapsed ? 'justify-center p-3' : 'justify-between p-4'
             )}
           >
@@ -122,7 +122,7 @@ export function DashboardLayout() {
           </div>
 
           {/* Navegación del Menú */}
-          <nav className="flex-1 space-y-1.5 p-3 overflow-y-auto overflow-x-hidden">
+          <nav className="flex-1 space-y-1.5 p-3 overflow-y-auto overflow-x-hidden min-h-0">
             {!collapsed && (
               <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                 Menú Principal
@@ -177,7 +177,7 @@ export function DashboardLayout() {
           </nav>
 
           {/* Perfil del Usuario en el Footer del Sidebar */}
-          <div className="border-t border-slate-100 p-3 bg-slate-50/80">
+          <div className="border-t border-slate-100 p-3 bg-slate-50/80 shrink-0">
             <div
               className={cn(
                 'flex items-center min-w-0',
@@ -185,12 +185,12 @@ export function DashboardLayout() {
               )}
             >
               <div className="h-9 w-9 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                {user?.fullName?.charAt(0) || 'D'}
+                {user?.fullName?.charAt(0) || 'P'}
               </div>
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold text-slate-900 truncate">
-                    {user?.fullName || 'Teacher Diana'}
+                    {user?.fullName || 'Docente'}
                   </p>
                   <p className="text-[11px] text-slate-500 truncate">Docente de Inglés</p>
                 </div>
@@ -270,11 +270,11 @@ export function DashboardLayout() {
               <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="h-9 w-9 rounded-full bg-blue-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                    {user?.fullName?.charAt(0) || 'D'}
+                    {user?.fullName?.charAt(0) || 'P'}
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-900 truncate">
-                      {user?.fullName || 'Teacher Diana'}
+                      {user?.fullName || 'Docente'}
                     </p>
                     <p className="text-[11px] text-slate-500 truncate">Docente de Inglés</p>
                   </div>
@@ -301,7 +301,7 @@ export function DashboardLayout() {
 
               <span className="md:hidden font-bold text-blue-900 text-sm">CINDEA Cloud</span>
               <div className="hidden sm:block text-xs font-medium text-slate-500">
-                Centro Integrado de Educación de Adultos (CINDEA) • Cañas, Guanacaste
+                Centro Integrado de Educación de Adultos (CINDEA) · MEP
               </div>
             </div>
 

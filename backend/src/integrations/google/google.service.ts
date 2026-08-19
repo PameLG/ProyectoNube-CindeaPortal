@@ -360,7 +360,7 @@ export async function createRealCalendarEvent(
       requestBody: {
         summary: event.summary,
         description: event.description,
-        location: event.location || 'CINDEA Cañas, Guanacaste',
+        location: event.location || 'CINDEA',
         start: {
           dateTime: new Date(event.startDateTime).toISOString(),
           timeZone: 'America/Costa_Rica',

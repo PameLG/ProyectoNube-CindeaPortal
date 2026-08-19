@@ -65,6 +65,20 @@ export const gradeQueries = {
       );
     }
     const db = getLocalDb();
+    if (!db.grades) db.grades = [];
+
+    // Deduplicar registros idénticos por tarea/actividad y alumno
+    const seen = new Set<string>();
+    const uniqueGrades: GradeRow[] = [];
+    for (const g of db.grades) {
+      const key = `${g.course_id}_${g.student_id}_${g.assignment_id || g.title}_${g.category || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueGrades.push(g);
+      }
+    }
+    db.grades = uniqueGrades;
+
     const list = db.grades.filter((g) => g.course_id === courseId);
     return { rows: list, rowCount: list.length };
   },
@@ -77,6 +91,7 @@ export const gradeQueries = {
       );
     }
     const db = getLocalDb();
+    if (!db.grades) db.grades = [];
     const list = db.grades.filter((g) => g.course_id === courseId && g.student_id === studentId);
     return { rows: list, rowCount: list.length };
   },
@@ -86,6 +101,7 @@ export const gradeQueries = {
       return pool.query<GradeRow>('SELECT * FROM grades WHERE id = $1', [id]);
     }
     const db = getLocalDb();
+    if (!db.grades) db.grades = [];
     const g = db.grades.find((x) => x.id === id);
     return { rows: g ? [g] : [], rowCount: g ? 1 : 0 };
   },
@@ -138,6 +154,36 @@ export const gradeQueries = {
       }
     }
     const db = getLocalDb();
+    if (!db.grades) db.grades = [];
+
+    // Si ya existe una nota para este estudiante y la misma tarea o examen, actualizarla en lugar de duplicarla
+    const existingIndex = db.grades.findIndex(
+      (g) =>
+        g.course_id === courseId &&
+        g.student_id === data.studentId &&
+        ((data.assignmentId && g.assignment_id === data.assignmentId) ||
+          (!data.assignmentId && g.title.toLowerCase().trim() === data.title.toLowerCase().trim()))
+    );
+
+    if (existingIndex >= 0) {
+      db.grades[existingIndex] = {
+        ...db.grades[existingIndex],
+        title: data.title,
+        category: data.category ?? db.grades[existingIndex].category,
+        score: data.score,
+        max_score: data.maxScore,
+        weight: data.weight ?? db.grades[existingIndex].weight,
+        graded_on: data.gradedOn || new Date().toISOString(),
+        notes: data.notes ?? db.grades[existingIndex].notes,
+        attachment_name: data.attachmentName ?? db.grades[existingIndex].attachment_name,
+        attachment_data: data.attachmentData ?? db.grades[existingIndex].attachment_data,
+        attachment_url: data.attachmentUrl ?? db.grades[existingIndex].attachment_url,
+        updated_at: new Date().toISOString(),
+      };
+      saveLocalDb();
+      return { rows: [db.grades[existingIndex]], rowCount: 1 };
+    }
+
     const newGrade: GradeRow = {
       id: crypto.randomUUID(),
       course_id: courseId,
@@ -148,7 +194,7 @@ export const gradeQueries = {
       score: data.score,
       max_score: data.maxScore,
       weight: data.weight ?? 1,
-      graded_on: data.gradedOn,
+      graded_on: data.gradedOn || new Date().toISOString(),
       notes: data.notes ?? null,
       attachment_name: data.attachmentName ?? null,
       attachment_data: data.attachmentData ?? null,

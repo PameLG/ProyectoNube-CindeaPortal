@@ -69,7 +69,18 @@ export const submissionsController = {
         if (assignment) {
           const courseRes = await courseQueries.findById(assignment.course_id);
           const courseName = courseRes.rows[0]?.name || 'Inglés CINDEA';
-          await uploadFileToDrive(courseName, assignment.title, data.fileName, data.fileData, oldFileName);
+          if (data.fileData && data.fileData.startsWith('{"isMulti":true')) {
+            try {
+              const multi = JSON.parse(data.fileData);
+              if (Array.isArray(multi.files)) {
+                for (const item of multi.files) {
+                  await uploadFileToDrive(courseName, assignment.title, item.name, item.data, undefined);
+                }
+              }
+            } catch (_) {}
+          } else {
+            await uploadFileToDrive(courseName, assignment.title, data.fileName, data.fileData, oldFileName);
+          }
         }
       } catch (err: any) {
         console.warn('[Submissions] No se pudo sincronizar archivo con Drive:', err.message);

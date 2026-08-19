@@ -7,15 +7,19 @@ import { ErrorMessage } from '../components/ErrorMessage';
 import { coursesService, type CourseStudent } from '../services/courses.service';
 import { studentsService } from '../services/students.service';
 import type { Course, Student } from '../types';
+import { alerts } from '../utils/alerts';
+import { cn } from '../utils';
 import {
   Plus,
   CalendarCheck,
   GraduationCap,
   Users,
   Trash2,
-  Building2,
   CheckCircle2,
-  UserPlus,
+  Building2,
+  LayoutGrid,
+  List,
+  Clock,
 } from 'lucide-react';
 
 interface FormState {
@@ -36,6 +40,7 @@ export function Courses() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   const [enrollCourse, setEnrollCourse] = useState<Course | null>(null);
   const [enrolled, setEnrolled] = useState<CourseStudent[]>([]);
@@ -92,14 +97,17 @@ export function Courses() {
   };
 
   const onDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Seguro que deseas eliminar el grupo "${name}"? Se desvincularán sus listas asociadas.`)) return;
+    const ok = await alerts.confirmDelete(
+      `¿Eliminar grupo "${name}"?`,
+      'Se desvincularán sus listas de estudiantes y actas asociadas.'
+    );
+    if (!ok) return;
     try {
       await coursesService.remove(id);
-      setSuccessMsg(`Grupo "${name}" eliminado correctamente.`);
+      alerts.success('Grupo eliminado', `El grupo "${name}" fue eliminado correctamente.`);
       load();
-      setTimeout(() => setSuccessMsg(null), 3500);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Error al eliminar el grupo');
+      alerts.error('Error al eliminar', e?.response?.data?.error ?? 'Error al eliminar el grupo');
     }
   };
 
@@ -169,118 +177,249 @@ export function Courses() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Principal */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 text-xs font-bold mb-1">
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Sedes y Asignaciones CINDEA MEP</span>
-            </div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              Grupos y Sedes de Inglés
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500 mt-0.5">
-              Administra tus grupos tanto en la <strong>Sede Central</strong> como en <strong>Sedes Satelitales</strong> (Bebedero, Porozó, etc.). Cada grupo mantiene sus actas y listas 100% independientes.
-            </p>
+      {/* 1. Header Minimalista & Acción */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Building2 className="w-6 h-6 text-blue-600 shrink-0" />
+            <span>Grupos & Secciones</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Total activos: <strong className="text-slate-800 font-semibold">{courses.length} grupos</strong>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {/* Selector de Vista */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer',
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-700 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              )}
+              title="Vista de Tarjetas Coquetas"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tarjetas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={cn(
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer',
+                viewMode === 'table'
+                  ? 'bg-white text-blue-700 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              )}
+              title="Vista de Tabla Compacta"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Lista</span>
+            </button>
           </div>
 
           <Button
             onClick={() => setOpen(true)}
-            className="font-bold text-xs bg-blue-700 hover:bg-blue-800 text-white py-2.5 px-4 rounded-xl shadow-xs shrink-0 flex items-center gap-2"
+            className="font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white py-2.5 px-4 rounded-xl shadow-xs shrink-0 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>Crear Nuevo Grupo / Sede</span>
+            <span>Nuevo Grupo</span>
           </Button>
         </div>
-
-        {/* Notificaciones */}
-        {successMsg && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-        {error && <ErrorMessage>{error}</ErrorMessage>}
       </div>
 
-      {/* 2. Grid de Grupos y Sedes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {courses.map((course) => {
-          const studentCount = courseStudentCounts[course.id] ?? 0;
-          return (
-            <div
-              key={course.id}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs hover:border-blue-300 hover:shadow-md transition space-y-4 flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 font-mono">
-                    {course.code || 'ING'}
-                  </span>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">
-                    <Users className="w-3.5 h-3.5 text-blue-600" />
-                    <span>{studentCount} estudiante{studentCount !== 1 ? 's' : ''}</span>
+      {/* Notificaciones */}
+      {successMsg && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          <span>{successMsg}</span>
+        </div>
+      )}
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+
+      {/* 2. VISTA DE TARJETAS COQUETAS (GRID) */}
+      {viewMode === 'grid' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {courses.map((course) => {
+            const studentCount = courseStudentCounts[course.id] ?? 0;
+            return (
+              <div
+                key={course.id}
+                className="group relative flex flex-col justify-between bg-white rounded-2xl border border-slate-200/90 hover:border-blue-300 hover:shadow-md transition-all duration-200 overflow-hidden"
+              >
+                {/* Franja de Acento de Color */}
+                <div
+                  className="h-1.5 w-full"
+                  style={{ backgroundColor: course.color || '#2563EB' }}
+                />
+
+                <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
+                  {/* Encabezado de la Tarjeta */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center font-mono font-extrabold text-[11px] bg-blue-50 text-blue-800 px-2.5 py-0.5 rounded-md border border-blue-200/80">
+                        {course.code || 'ING'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => openEnroll(course)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200/80 text-[11px] font-bold transition cursor-pointer"
+                        title="Gestionar matrícula de alumnos de este grupo"
+                      >
+                        <Users className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{studentCount} {studentCount === 1 ? 'alumno' : 'alumnos'}</span>
+                      </button>
+                    </div>
+
+                    <h3 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-blue-700 transition-colors line-clamp-2">
+                      {course.name}
+                    </h3>
+
+                    {course.description && (
+                      <p className="text-[11px] text-slate-500 line-clamp-2 flex items-start gap-1">
+                        <Clock className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
+                        <span>{course.description}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Acciones Rápidas Coquetas */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/attendance?courseId=${course.id}`)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200/80 font-bold text-xs transition cursor-pointer shadow-2xs"
+                        title="Pasar Lista de Asistencia"
+                      >
+                        <CalendarCheck className="w-3.5 h-3.5" />
+                        <span>Lista</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/grades?courseId=${course.id}`)}
+                        className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200/80 font-bold text-xs transition cursor-pointer shadow-2xs"
+                        title="Ver Calificaciones MEP"
+                      >
+                        <GraduationCap className="w-3.5 h-3.5" />
+                        <span>Notas</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => onDelete(course.id, course.name)}
+                      className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer shrink-0"
+                      title="Eliminar grupo"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
-
-                <div>
-                  <h3 className="text-base md:text-lg font-black text-slate-900">
-                    {course.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    {course.description || 'Grupo oficial matriculado en CINDEA'}
-                  </p>
-                </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Botones de acción directa por Sede/Grupo */}
-              <div className="pt-4 border-t border-slate-100 space-y-2.5">
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    onClick={() => navigate(`/attendance?courseId=${course.id}`)}
-                    className="w-full text-xs font-bold bg-blue-600 hover:bg-blue-700"
-                  >
-                    <CalendarCheck className="w-3.5 h-3.5 mr-1" />
-                    Pasar Lista
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => navigate(`/grades?courseId=${course.id}`)}
-                    className="w-full text-xs font-semibold"
-                  >
-                    <GraduationCap className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                    Ver Notas
-                  </Button>
-                </div>
+      {/* 3. VISTA DE TABLA COMPACTA */}
+      {viewMode === 'table' && (
+        <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 select-none">
+                  <th className="py-3 px-4 w-10 text-center">#</th>
+                  <th className="py-3 px-4 w-28">Código</th>
+                  <th className="py-3 px-4">Grupo / Sede</th>
+                  <th className="py-3 px-4">Descripción / Horario</th>
+                  <th className="py-3 px-4 text-center">Matrícula</th>
+                  <th className="py-3 px-4 text-right pr-6">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {courses.map((course, idx) => {
+                  const studentCount = courseStudentCounts[course.id] ?? 0;
+                  return (
+                    <tr key={course.id} className="hover:bg-blue-50/40 transition-colors group">
+                      <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">
+                        {idx + 1}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="inline-flex items-center font-mono font-bold text-xs bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md border border-blue-200">
+                          {course.code || 'ING'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: course.color || '#2563EB' }}
+                          />
+                          <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                            {course.name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500 font-medium">
+                        {course.description || 'Grupo oficial matriculado en CINDEA'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => openEnroll(course)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 text-xs font-bold transition shadow-2xs cursor-pointer"
+                          title="Administrar alumnos"
+                        >
+                          <Users className="w-3.5 h-3.5 text-blue-600" />
+                          <span>{studentCount}</span>
+                        </button>
+                      </td>
+                      <td className="py-3 px-4 text-right pr-6">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/attendance?courseId=${course.id}`)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 font-bold text-xs transition shadow-2xs cursor-pointer"
+                            title="Pasar Lista de Asistencia"
+                          >
+                            <CalendarCheck className="w-3.5 h-3.5" />
+                            <span>Lista</span>
+                          </button>
 
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => openEnroll(course)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-700 hover:text-blue-900 transition"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Administrar Alumnos ({studentCount})</span>
-                  </button>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/grades?courseId=${course.id}`)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 font-bold text-xs transition shadow-2xs cursor-pointer"
+                            title="Ver Calificaciones MEP"
+                          >
+                            <GraduationCap className="w-3.5 h-3.5" />
+                            <span>Notas</span>
+                          </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onDelete(course.id, course.name)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                    title="Eliminar grupo"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                          <button
+                            type="button"
+                            onClick={() => onDelete(course.id, course.name)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition cursor-pointer"
+                            title="Eliminar grupo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* 3. Modal: Crear Nuevo Grupo / Sede */}
       <Modal

@@ -46,7 +46,7 @@ export const env = {
 
   teacherAllowedEmails: (
     process.env.AUTHORIZED_TEACHER_EMAILS ||
-    'pruebaproyecto551@gmail.com,teacher.diana@gmail.com,diana@mep.go.cr,profesoradiana@gmail.com'
+    'pruebaproyecto551@gmail.com,teacher.diana@gmail.com,diana@mep.go.cr,profesoradiana@gmail.com,pameleivagomez@gmail.com,leivagpame@gmail.com,pamelaleiva@gmail.com,pamela@mep.go.cr'
   )
     .split(',')
     .map((e) => e.trim().toLowerCase())

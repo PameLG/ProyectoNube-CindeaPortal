@@ -84,9 +84,27 @@ export const studentsController = {
 
       if (exists.rowCount && exists.rowCount > 0) {
         targetUser = exists.rows[0];
-        const stExists = await studentQueries.findByUserId(targetUser.id);
+        const stExists = await studentQueries.findByCedulaOrStudentNumber(data.studentNumber);
         if (stExists.rowCount && stExists.rowCount > 0) {
-          throw Object.assign(new Error('Ya existe un estudiante con esa cédula o correo registrado'), { status: 409 });
+          const existingStudent = stExists.rows[0];
+          const updated = await studentQueries.update(existingStudent.id, {
+            gradeLevel: gradeLevelName ?? existingStudent.grade_level,
+            guardianPhone: data.guardianPhone ?? existingStudent.guardian_phone,
+          });
+          if (data.courseId) {
+            const { enrollmentQueries } = await import('../database/queries/enrollments');
+            await enrollmentQueries.setSingleEnrollment(existingStudent.id, data.courseId).catch(() => {});
+          }
+          return res.status(200).json({
+            student: {
+              ...toStudentDTO(updated.rows[0] || existingStudent),
+              fullName: targetUser.full_name || data.fullName,
+              email: targetUser.email,
+              courseId: data.courseId || null,
+              courseName: gradeLevelName || null,
+            },
+            user: toPublicUser(targetUser),
+          });
         }
       } else {
         const passwordHash = await bcrypt.hash(plainPassword, 10);

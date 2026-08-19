@@ -42,7 +42,17 @@ export const studentQueries = {
       return pool.query<StudentRow>('SELECT * FROM students ORDER BY created_at DESC');
     }
     const db = getLocalDb();
-    return { rows: db.students, rowCount: db.students.length };
+    const seen = new Set<string>();
+    const uniqueStudents: StudentRow[] = [];
+    for (const s of db.students) {
+      const key = (s.student_number || s.id).trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueStudents.push(s);
+      }
+    }
+    db.students = uniqueStudents;
+    return { rows: uniqueStudents, rowCount: uniqueStudents.length };
   },
 
   async listEnrolledInTeacherCourses(teacherId: string) {
@@ -55,7 +65,17 @@ export const studentQueries = {
       );
     }
     const db = getLocalDb();
-    return { rows: db.students, rowCount: db.students.length };
+    const seen = new Set<string>();
+    const uniqueStudents: StudentRow[] = [];
+    for (const s of db.students) {
+      const key = (s.student_number || s.id).trim().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueStudents.push(s);
+      }
+    }
+    db.students = uniqueStudents;
+    return { rows: uniqueStudents, rowCount: uniqueStudents.length };
   },
 
   async findById(id: string) {
@@ -146,6 +166,17 @@ export const studentQueries = {
       }
     }
     const db = getLocalDb();
+    const cleanNum = (data.studentNumber || '').trim();
+    const existing = cleanNum ? db.students.find((s) => s.student_number === cleanNum || s.user_id === data.userId) : null;
+    if (existing) {
+      if (data.gradeLevel) existing.grade_level = data.gradeLevel;
+      if (data.guardianPhone) existing.guardian_phone = data.guardianPhone;
+      if (data.birthDate) existing.birth_date = data.birthDate;
+      existing.updated_at = new Date().toISOString();
+      saveLocalDb();
+      return { rows: [existing], rowCount: 1 };
+    }
+
     const newStudent: StudentRow = {
       id: crypto.randomUUID(),
       user_id: data.userId,

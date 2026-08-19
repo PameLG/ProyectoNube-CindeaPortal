@@ -34,6 +34,16 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const ACCESS_TOKEN_KEY = 'access_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const AUTH_USER_KEY = 'auth_user';
+
+function getStoredUser(): User | null {
+  try {
+    const raw = localStorage.getItem(AUTH_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 function getAccessToken(): string | null {
   return localStorage.getItem(ACCESS_TOKEN_KEY);
@@ -51,6 +61,7 @@ function setTokens(access: string, refresh: string) {
 function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
 }
 
 async function fetchMe(token: string): Promise<User | null> {
@@ -66,11 +77,29 @@ async function fetchMe(token: string): Promise<User | null> {
   }
 }
 
+function checkInitialAuth(): { token: string | null; status: 'loading' | 'authenticated' | 'unauthenticated' } {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const accessToken = params.get('accessToken');
+    const refreshToken = params.get('refreshToken');
+    if (accessToken && refreshToken) {
+      setTokens(accessToken, refreshToken);
+      return { token: accessToken, status: 'loading' };
+    }
+  } catch {}
+
+  const token = getAccessToken();
+  if (token) {
+    return { token, status: getStoredUser() ? 'authenticated' : 'loading' };
+  }
+  return { token: null, status: 'unauthenticated' };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(
-    'loading'
-  );
+  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [status, setStatus] = useState<'loading' | 'authenticated' | 'unauthenticated'>(() => {
+    return checkInitialAuth().status;
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -84,12 +113,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const token = getAccessToken();
     if (!token) {
+      clearTokens();
+      setUser(null);
       setStatus('unauthenticated');
       return;
     }
 
     fetchMe(token).then((u) => {
       if (u) {
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(u));
         setUser(u);
         setStatus('authenticated');
       } else {
@@ -97,6 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setStatus('unauthenticated');
       }
+    }).catch(() => {
+      clearTokens();
+      setUser(null);
+      setStatus('unauthenticated');
     });
   }, []);
 
@@ -112,6 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = await res.json();
     setTokens(data.accessToken, data.refreshToken);
+    if (data.user) {
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+    }
     setUser(data.user);
     setStatus('authenticated');
     return data.user;

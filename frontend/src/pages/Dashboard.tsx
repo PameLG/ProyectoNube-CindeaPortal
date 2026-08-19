@@ -87,7 +87,7 @@ export function Dashboard() {
               <span>Periodo Lectivo 2026 · CINDEA MEP</span>
             </div>
             <h1 className="text-xl md:text-2xl font-black tracking-tight">
-              ¡Hola, {user?.fullName || 'Teacher Diana'}! 👋
+              ¡Hola, {user?.fullName || 'Docente'}! 👋
             </h1>
             <p className="text-xs md:text-sm text-slate-300">
               Panel docente institucional para la gestión académica, asistencia y calificaciones de inglés.

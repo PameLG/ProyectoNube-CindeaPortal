@@ -40,8 +40,13 @@ export const announcementsController = {
   async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const data = announcementSchema.parse(req.body);
-      const userObj = req.user as any;
-      const sentBy = userObj?.fullName ? `Prof. ${userObj.fullName}` : 'Teacher Diana (Inglés CINDEA)';
+      const { userQueries } = await import('../database/queries/users');
+      let senderName = 'Docente de Inglés';
+      if (req.user?.id) {
+        const userRes = await userQueries.findById(req.user.id);
+        senderName = userRes?.rows?.[0]?.full_name || userRes?.rows?.[0]?.fullName || req.user.email || 'Docente de Inglés';
+      }
+      const sentBy = senderName.startsWith('Prof.') || senderName.startsWith('Teacher') ? senderName : `Prof. ${senderName}`;
       const result = await announcementQueries.create({
         courseId: data.courseId,
         title: data.title,

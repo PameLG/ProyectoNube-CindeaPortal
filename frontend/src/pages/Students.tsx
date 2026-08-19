@@ -1,20 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from '../components/Button';
 import { Modal } from '../components/Modal';
 import { ErrorMessage } from '../components/ErrorMessage';
 import { studentsService } from '../services/students.service';
 import { coursesService } from '../services/courses.service';
 import type { Student, Course } from '../types';
+import { alerts } from '../utils/alerts';
 import {
   Users,
   UserPlus,
   FileSpreadsheet,
   Trash2,
   CheckCircle2,
-  KeyRound,
   ShieldCheck,
   Search,
+  Pencil,
+  Sparkles,
+  UploadCloud,
+  AlertCircle,
 } from 'lucide-react';
+import { cn } from '../utils';
 
 const DEFAULT_ENGLISH_COURSES: Course[] = [
   { id: '55555555-5555-4555-a555-555555555551', name: 'Inglés 10° Año (Módulo IV)', code: 'ING-10', teacherId: '', description: null, color: '#2563EB' },
@@ -42,9 +48,14 @@ export function Students() {
     courseId: '55555555-5555-4555-a555-555555555551',
   });
 
-  // Modal 2: Pegar Lista de Excel Masiva
+  // Modal 2: Cargar Archivo Excel Masivo
   const [openBatchModal, setOpenBatchModal] = useState(false);
-  const [batchText, setBatchText] = useState('');
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [parsedStudents, setParsedStudents] = useState<
+    Array<{ fullName: string; studentNumber: string; gradeLevel: string; courseId?: string }>
+  >([]);
+  const [parsingError, setParsingError] = useState<string | null>(null);
   const [batchCourseId, setBatchCourseId] = useState('auto');
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,121 +139,173 @@ export function Students() {
     }
   };
 
-  // Crear estudiantes en bloque (Pegar de Excel)
+  // Cargar y procesar archivo Excel (.xlsx, .xls, .csv)
+  const handleFileUpload = (file: File) => {
+    setExcelFile(file);
+    setParsingError(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const buffer = e.target?.result;
+        const workbook = XLSX.read(buffer, { type: 'binary' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawData = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 });
+
+        const extracted: Array<{ fullName: string; studentNumber: string; gradeLevel: string; courseId?: string }> = [];
+
+        for (const row of rawData) {
+          if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+          // Convertir todas las celdas a string limpio
+          const cells = row.map((c) => (c !== undefined && c !== null ? String(c).trim() : '')).filter(Boolean);
+          if (cells.length === 0) continue;
+
+          // Omitir fila de encabezados si contiene palabras clave de títulos
+          const rowText = cells.join(' ').toLowerCase();
+          if (
+            rowText.includes('cedula') ||
+            rowText.includes('cédula') ||
+            rowText.includes('identificación') ||
+            rowText.includes('dimex') ||
+            rowText.includes('nombre del estudiante') ||
+            rowText.includes('apellidos')
+          ) {
+            continue;
+          }
+
+          let studentNumber = '';
+          const nameParts: string[] = [];
+          let gradeText = '';
+
+          for (const cell of cells) {
+            const cleanDigits = cell.replace(/\D/g, '');
+            if (!studentNumber && cleanDigits.length >= 7 && cleanDigits.length <= 13) {
+              studentNumber = cleanDigits;
+            } else if (cleanDigits.length < 5 && cell.length >= 2) {
+              if (
+                cell.toLowerCase().includes('ingl') ||
+                cell.toLowerCase().includes('año') ||
+                cell.toLowerCase().includes('módulo') ||
+                cell.toLowerCase().includes('modulo') ||
+                cell.toLowerCase().includes('10') ||
+                cell.toLowerCase().includes('11') ||
+                cell.toLowerCase().includes('9') ||
+                cell.toLowerCase().includes('7') ||
+                cell.toLowerCase().includes('8')
+              ) {
+                gradeText = cell;
+              } else {
+                nameParts.push(cell);
+              }
+            } else if (cell.length >= 2) {
+              nameParts.push(cell);
+            }
+          }
+
+          const fullName = nameParts.join(' ').replace(/["']/g, '').trim();
+          if (!fullName || fullName.length < 2) continue;
+
+          if (!studentNumber) {
+            studentNumber = `EST-${Math.floor(100000 + Math.random() * 900000)}`;
+          }
+
+          let finalCourseId = '';
+          let finalGradeLevel = '';
+          if (batchCourseId !== 'auto') {
+            finalCourseId = batchCourseId;
+            const found = courses.find((c) => c.id === batchCourseId);
+            finalGradeLevel = found?.name || 'Inglés CINDEA';
+          } else {
+            const autoFound = resolveCourseByText(gradeText, courses);
+            if (autoFound) {
+              finalCourseId = autoFound.id;
+              finalGradeLevel = autoFound.name;
+            } else {
+              finalCourseId = courses[0]?.id || '';
+              finalGradeLevel = courses[0]?.name || 'Inglés 10° Año (Módulo IV)';
+            }
+          }
+
+          extracted.push({
+            fullName,
+            studentNumber,
+            gradeLevel: finalGradeLevel,
+            courseId: finalCourseId,
+          });
+        }
+
+        // Deduplicar lista extraída por cédula / studentNumber
+        const seenNumbers = new Set<string>();
+        const uniqueExtracted: Array<{ fullName: string; studentNumber: string; gradeLevel: string; courseId?: string }> = [];
+        for (const st of extracted) {
+          const key = st.studentNumber.trim().toLowerCase();
+          if (!seenNumbers.has(key)) {
+            seenNumbers.add(key);
+            uniqueExtracted.push(st);
+          }
+        }
+
+        if (uniqueExtracted.length === 0) {
+          setParsingError('No se encontraron filas con estudiantes en el archivo. Verifica que contenga columnas de cédula y nombre.');
+        } else {
+          setParsedStudents(uniqueExtracted);
+        }
+      } catch {
+        setParsingError('Error al leer el archivo Excel. Asegúrate de que sea un archivo .xlsx, .xls o .csv válido.');
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Importar estudiantes detectados desde el archivo
   const onBatchSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!batchText.trim()) return;
+    if (parsedStudents.length === 0) {
+      setError('Por favor selecciona un archivo Excel con estudiantes antes de importar.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
     try {
-      // Separar por líneas
-      const lines = batchText.trim().split('\n');
-      const parsedStudents: { fullName: string; studentNumber: string; email?: string; gradeLevel: string; courseId?: string }[] = [];
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        // Dividir por tabulación (copiado directo de Excel) o comas o punto y coma
-        let parts = line.split('\t');
-        if (parts.length < 2) parts = line.split(';');
-        if (parts.length < 2) parts = line.split(',');
-
-        // Si es la fila de encabezados (ej. Cedula, Nombre Completo), ignorarla
-        const lowerFirst = (parts[0] || '').toLowerCase();
-        const lowerSecond = (parts[1] || '').toLowerCase();
-        if (
-          lowerFirst.includes('cedula') ||
-          lowerFirst.includes('nombre') ||
-          lowerFirst.includes('estudiante') ||
-          lowerSecond.includes('nombre') ||
-          lowerSecond.includes('cedula')
-        ) {
-          continue;
+      let createdCount = 0;
+      for (const st of parsedStudents) {
+        let finalCourseId = st.courseId;
+        let finalGradeLevel = st.gradeLevel;
+        if (batchCourseId !== 'auto') {
+          finalCourseId = batchCourseId;
+          const found = courses.find((c) => c.id === batchCourseId);
+          finalGradeLevel = found?.name || 'Inglés CINDEA';
         }
 
-        let studentNumber = '';
-        let fullName = '';
-        let email = '';
-        let gradeLevel = '';
-
-        if (parts.length >= 4) {
-          // Formato: Cedula, Nombre Completo, Correo, Nivel
-          studentNumber = parts[0].trim();
-          fullName = parts[1].trim();
-          email = parts[2].trim();
-          gradeLevel = parts[3].trim();
-        } else if (parts.length === 3) {
-          // Formato: Cedula, Nombre, Nivel (o correo)
-          studentNumber = parts[0].trim();
-          fullName = parts[1].trim();
-          if (parts[2].includes('@')) {
-            email = parts[2].trim();
-          } else {
-            gradeLevel = parts[2].trim();
-          }
-        } else if (parts.length === 2) {
-          const p1 = parts[0].trim();
-          const p2 = parts[1].trim();
-          if (/^[0-9]/.test(p1)) {
-            studentNumber = p1;
-            fullName = p2;
-          } else {
-            fullName = p1;
-            studentNumber = p2;
-          }
-        } else {
-          fullName = line.trim();
-          studentNumber = `ID-${Math.floor(100000 + Math.random() * 900000)}`;
+        try {
+          await studentsService.create({
+            fullName: st.fullName,
+            studentNumber: st.studentNumber,
+            gradeLevel: finalGradeLevel,
+            courseId: finalCourseId,
+          });
+          createdCount++;
+        } catch {
+          // Si ya existe continuar con los demás
         }
-
-        studentNumber = studentNumber.replace(/\D/g, '') || studentNumber;
-        if (!fullName || !studentNumber) continue;
-
-        // Auto-detectar curso si batchCourseId es 'auto'
-        let matchedCourse: Course | undefined;
-        if (gradeLevel) {
-          matchedCourse = resolveCourseByText(gradeLevel, courses);
-        }
-        if (!matchedCourse && batchCourseId && batchCourseId !== 'auto') {
-          matchedCourse = courses.find((c) => c.id === batchCourseId);
-        }
-
-        const finalCourseId = batchCourseId && batchCourseId !== 'auto'
-          ? batchCourseId
-          : matchedCourse?.id || courses[0]?.id;
-
-        const finalGradeLevel = matchedCourse?.name || gradeLevel || courses.find((c) => c.id === finalCourseId)?.name || 'Inglés 10° Año';
-
-        parsedStudents.push({
-          fullName,
-          studentNumber,
-          email: email || undefined,
-          gradeLevel: finalGradeLevel,
-          courseId: finalCourseId,
-        });
       }
-
-      if (parsedStudents.length === 0) {
-        throw new Error('No se detectaron estudiantes válidos en el texto pegado.');
-      }
-
-      const res = await studentsService.createBatch({
-        students: parsedStudents,
-        courseId: batchCourseId && batchCourseId !== 'auto' ? batchCourseId : undefined,
-      });
 
       setOpenBatchModal(false);
-      setBatchText('');
-      setSuccessMsg(res.message || `¡Se matricularon ${parsedStudents.length} estudiantes correctamente!`);
+      setExcelFile(null);
+      setParsedStudents([]);
+      setSuccessMsg(`¡Éxito! Se importaron ${createdCount} estudiantes desde el archivo Excel.`);
       loadData();
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setTimeout(() => setSuccessMsg(null), 5000);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? e?.message ?? 'Error al procesar la lista masiva');
+      setError(e?.message || 'Error al procesar la lista masiva de estudiantes');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Guardar edición de grado / nivel
   const onEditSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editingStudent || !selectedNewCourseId) return;
@@ -267,167 +330,266 @@ export function Students() {
   };
 
   const onDelete = async (id: string) => {
-    if (!confirm('¿Seguro que deseas eliminar a este estudiante del sistema?')) return;
+    const ok = await alerts.confirmDelete(
+      '¿Eliminar estudiante del sistema?',
+      'Se removerá de las listas de asistencia y registro de calificaciones.'
+    );
+    if (!ok) return;
     try {
       await studentsService.remove(id);
-      setSuccessMsg('Estudiante eliminado correctamente del sistema.');
+      alerts.success('Estudiante eliminado', 'El registro se actualizó correctamente.');
       loadData();
-      setTimeout(() => setSuccessMsg(null), 3500);
     } catch (e: any) {
-      setError(e?.response?.data?.error ?? 'Error al eliminar el estudiante');
+      alerts.error('Error al eliminar', e?.response?.data?.error ?? 'No se pudo eliminar el estudiante');
     }
   };
 
-  const filteredStudents = students.filter((s) => {
-    const name = s.fullName || '';
-    const num = s.studentNumber || '';
-    const matchesSearch =
-      name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      num.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGrade = selectedGrade === 'ALL' || s.gradeLevel === selectedGrade;
-    return matchesSearch && matchesGrade;
-  });
+  const filteredStudents = students
+    .filter((s) => {
+      const name = s.fullName || '';
+      const num = s.studentNumber || '';
+      const matchesSearch =
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        num.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGrade = selectedGrade === 'ALL' || s.gradeLevel === selectedGrade;
+      return matchesSearch && matchesGrade;
+    })
+    .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'es', { sensitivity: 'base' }));
+
+  function sanitizeFilename(name: string): string {
+    return name
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+  }
+
+  const exportStudentsExcel = () => {
+    if (filteredStudents.length === 0) return;
+    const gradeTitle = selectedGrade === 'ALL' ? 'Todos los Grados' : selectedGrade;
+    const cleanTitle = sanitizeFilename(gradeTitle);
+
+    const rows: (string | number)[][] = [
+      ['EDUNUBE DOCENTE — NÓMINA OFICIAL DE ESTUDIANTES'],
+      ['Nivel / Filtro:', gradeTitle, '', 'Fecha de Emisión:', new Date().toLocaleDateString('es-CR', { day: '2-digit', month: 'long', year: 'numeric' })],
+      ['Total de Estudiantes:', filteredStudents.length, '', 'Año Lectivo:', '2026'],
+      [],
+      ['N°', 'Cédula / DIMEX', 'Nombre Completo del Estudiante', 'Nivel / Módulo', 'Contacto / Tel. Encargado'],
+    ];
+
+    filteredStudents.forEach((st, idx) => {
+      rows.push([
+        idx + 1,
+        st.studentNumber || '—',
+        st.fullName || '—',
+        st.gradeLevel || '—',
+        st.guardianPhone || '—',
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [
+      { wch: 6 },
+      { wch: 18 },
+      { wch: 38 },
+      { wch: 30 },
+      { wch: 24 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes');
+    XLSX.writeFile(wb, `Nomina_Estudiantes_${cleanTitle}.xlsx`);
+  };
 
   return (
     <div className="space-y-6">
-      {/* 1. Header con Botones de Registro */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 md:p-8 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 text-xs font-bold mb-1">
-              <Users className="w-3.5 h-3.5" />
-              <span>Matrícula CINDEA MEP</span>
-            </div>
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              Registro y Lista de Estudiantes
-            </h1>
-            <p className="text-xs md:text-sm text-slate-500 mt-0.5">
-              Administra a tus alumnos de inglés. Puedes registrarlos uno a uno o pegar la lista completa de Excel en 1 solo clic.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button
-              variant="secondary"
-              onClick={() => setOpenBatchModal(true)}
-              className="text-xs font-bold border-slate-200 hover:bg-slate-100"
-            >
-              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-600" />
-              Pegar Lista de Excel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => setOpenSingleModal(true)}
-              className="text-xs font-bold bg-blue-600 hover:bg-blue-700 shadow-xs"
-            >
-              <UserPlus className="w-4 h-4 mr-1.5" />
-              + Nuevo Alumno
-            </Button>
-          </div>
+      {/* 1. Header Minimalista & Acciones */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="w-6 h-6 text-blue-600 shrink-0" />
+            <span>Lista de Estudiantes</span>
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Total matriculados: <strong className="text-slate-800 font-semibold">{students.length} estudiantes</strong>
+          </p>
         </div>
 
-        {/* Tarjeta de Instrucción Clara para la Profesora */}
-        <div className="rounded-2xl bg-amber-50/80 border border-amber-200/80 p-4 flex items-start gap-3 text-xs text-amber-900">
-          <KeyRound className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="font-bold">
-              💡 ¿Cómo ingresan los estudiantes a su portal privado?
-            </p>
-            <p className="text-amber-800 leading-relaxed">
-              Cada estudiante puede ingresar directamente con su <strong>Cédula de Identidad o DIMEX</strong> y la contraseña inicial <strong>student123</strong>. No necesitan memorizar correos complicados.
-            </p>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={exportStudentsExcel}
+            disabled={filteredStudents.length === 0}
+            className="text-xs font-semibold bg-white text-slate-700 border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            Descargar Excel (.xlsx)
+          </Button>
+
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setExcelFile(null);
+              setParsedStudents([]);
+              setParsingError(null);
+              setOpenBatchModal(true);
+            }}
+            className="text-xs font-bold border-slate-200 hover:bg-slate-50 bg-white text-slate-700 shadow-2xs cursor-pointer"
+          >
+            <UploadCloud className="w-4 h-4 mr-1.5 text-blue-600" />
+            Cargar Archivo Excel
+          </Button>
+
+          <Button
+            variant="primary"
+            onClick={() => setOpenSingleModal(true)}
+            className="text-xs font-bold bg-blue-600 hover:bg-blue-700 shadow-xs cursor-pointer text-white"
+          >
+            <UserPlus className="w-4 h-4 mr-1.5" />
+            Nuevo Alumno
+          </Button>
         </div>
       </div>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
       {successMsg && (
-        <div className="p-4 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl flex items-center gap-2 shadow-xs">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+        <div className="p-3 text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl flex items-center gap-2 shadow-2xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
-      {/* 2. Barra de Búsqueda y Filtro */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o cédula..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:border-blue-500"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Filtrar Nivel:</span>
-          <select
-            value={selectedGrade}
-            onChange={(e) => setSelectedGrade(e.target.value)}
-            className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-500"
-          >
-            <option value="ALL">Todos los Niveles</option>
-            {courses.map((c) => (
-              <option key={c.id} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* 3. Lista de Estudiantes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredStudents.map((st) => (
-          <div
-            key={st.id}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-2xs hover:shadow-md transition space-y-3 flex flex-col justify-between"
-          >
-            <div className="space-y-2">
-              <div className="flex items-start justify-between">
-                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-100">
-                  {st.gradeLevel || 'Inglés CINDEA'}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      setEditingStudent(st);
-                      const currentCourse = courses.find((c) => c.id === st.courseId || c.name === st.gradeLevel);
-                      setSelectedNewCourseId(currentCourse?.id || courses[0]?.id || '');
-                      setOpenEditModal(true);
-                    }}
-                    className="text-[11px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-lg border border-blue-200 transition"
-                    title="Cambiar Grado / Nivel"
-                  >
-                    ✏️ Grado
-                  </button>
-                  <button
-                    onClick={() => onDelete(st.id)}
-                    className="text-slate-400 hover:text-rose-600 transition p-1"
-                    title="Eliminar estudiante"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">{st.fullName}</h3>
-                <div className="mt-1 flex items-center gap-2 text-xs font-mono text-slate-600 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200/60">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>Cédula: <strong>{st.studentNumber || 'Sin cédula'}</strong></span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-              <span>Clave: <strong className="font-mono text-slate-700">student123</strong></span>
-              <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Activo</span>
-            </div>
+      {/* 2. Contenedor de Tabla con Toolbar Integrado */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white overflow-hidden shadow-2xs">
+        {/* Barra de Búsqueda y Filtro Integrada en la Cabecera de la Tabla */}
+        <div className="p-3.5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o cédula..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-1.5 text-xs font-semibold rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-blue-500 shadow-2xs"
+            />
           </div>
-        ))}
+
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">Nivel / Grado:</span>
+            <select
+              value={selectedGrade}
+              onChange={(e) => setSelectedGrade(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
+            >
+              <option value="ALL">Todos los Grados ({students.length})</option>
+              {courses.map((c) => {
+                const count = students.filter((s) => s.courseId === c.id || s.gradeLevel === c.name).length;
+                return (
+                  <option key={c.id} value={c.name}>
+                    {c.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+
+        {/* 3. Tabla de Estudiantes */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/90 text-[11px] font-extrabold uppercase tracking-wider text-slate-500 select-none">
+                <th className="py-2.5 px-3.5 w-12 text-center">#</th>
+                <th className="py-2.5 px-3.5">Cédula / DIMEX</th>
+                <th className="py-2.5 px-3.5">Nombre Completo del Estudiante</th>
+                <th className="py-2.5 px-3.5">Nivel / Módulo</th>
+                <th className="py-2.5 px-3.5 text-center">Estado</th>
+                <th className="py-2.5 px-3.5 text-right pr-5">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredStudents.map((st, idx) => {
+                const course = courses.find((c) => c.id === st.courseId || c.name === st.gradeLevel);
+                return (
+                  <tr
+                    key={st.id}
+                    className="hover:bg-blue-50/40 transition-colors group"
+                  >
+                    {/* # Consecutivo */}
+                    <td className="py-2.5 px-3.5 text-center font-mono font-bold text-slate-400">
+                      {idx + 1}
+                    </td>
+
+                    {/* Cédula */}
+                    <td className="py-2.5 px-3.5">
+                      <span className="inline-flex items-center gap-1.5 font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-lg border border-slate-200/80">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        {st.studentNumber || 'Sin cédula'}
+                      </span>
+                    </td>
+
+                    {/* Nombre */}
+                    <td className="py-2.5 px-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-800 font-black text-[10px] flex items-center justify-center shrink-0">
+                          {st.fullName?.charAt(0) || 'E'}
+                        </div>
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm">
+                          {st.fullName}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Nivel / Grado */}
+                    <td className="py-2.5 px-3.5">
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-xs text-slate-700 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/80">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: course?.color || '#2563EB' }}
+                        />
+                        <span>{st.gradeLevel || 'Inglés CINDEA'}</span>
+                      </span>
+                    </td>
+
+                    {/* Estado */}
+                    <td className="py-2.5 px-3.5 text-center">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Activo
+                      </span>
+                    </td>
+
+                    {/* Acciones */}
+                    <td className="py-2.5 px-3.5 text-right pr-5">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setEditingStudent(st);
+                            const currentCourse = courses.find((c) => c.id === st.courseId || c.name === st.gradeLevel);
+                            setSelectedNewCourseId(currentCourse?.id || courses[0]?.id || '');
+                            setOpenEditModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded-lg border border-transparent hover:border-blue-200 transition"
+                          title="Cambiar Grado / Módulo"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(st.id)}
+                          className="text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-transparent hover:border-rose-200 transition"
+                          title="Eliminar estudiante"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {filteredStudents.length === 0 && !loading && (
@@ -518,136 +680,240 @@ export function Students() {
               type="tel"
               placeholder="Ej. 88889999"
               value={singleForm.guardianPhone}
-              onChange={(e) => setSingleForm({ ...singleForm, guardianPhone: e.target.value.replace(/\D/g, '') })}
-              inputMode="numeric"
+              onChange={(e) => setSingleForm({ ...singleForm, guardianPhone: e.target.value })}
               className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500"
             />
           </div>
         </form>
       </Modal>
 
-      {/* Modal 2: Pegar Lista de Excel Masiva */}
+      {/* Modal 2: Cargar Archivo de Excel */}
       <Modal
         open={openBatchModal}
-        title="📋 Cargar Lista Masiva desde Excel"
-        onClose={() => setOpenBatchModal(false)}
+        title="Cargar Lista de Estudiantes desde Archivo Excel"
+        onClose={() => {
+          setOpenBatchModal(false);
+          setExcelFile(null);
+          setParsedStudents([]);
+          setParsingError(null);
+        }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setOpenBatchModal(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setOpenBatchModal(false);
+                setExcelFile(null);
+                setParsedStudents([]);
+                setParsingError(null);
+              }}
+            >
               Cancelar
             </Button>
-            <Button type="submit" form="batch-student-form" disabled={submitting}>
-              {submitting ? 'Cargando lista...' : 'Matricular a Todos'}
+            <Button
+              type="submit"
+              form="batch-student-form"
+              disabled={submitting || parsedStudents.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+            >
+              {submitting
+                ? 'Importando...'
+                : parsedStudents.length > 0
+                ? `Importar ${parsedStudents.length} Estudiantes`
+                : 'Importar Lista'}
             </Button>
           </>
         }
       >
         <form id="batch-student-form" onSubmit={onBatchSubmit} className="space-y-4 text-xs">
-          <div className="rounded-xl bg-blue-50 p-3 text-blue-900 leading-relaxed space-y-1">
-            <p className="font-bold text-xs">✨ Carga Inteligente Multi-Nivel:</p>
-            <p className="text-[11px] text-blue-950/80">
-              Puedes subir un archivo <strong>.CSV</strong> o copiar las columnas de Excel (Cédula, Nombre, Correo, Nivel). El sistema <strong>detectará automáticamente el grado de cada alumno</strong> (10°, 11°, 9°, 7°-8°) y lo matriculará en su grupo correspondiente.
+          <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-3.5 text-emerald-950 space-y-1">
+            <div className="flex items-center gap-1.5 font-bold text-xs">
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Carga automática desde listas oficiales:</span>
+            </div>
+            <p className="text-[11px] text-emerald-800 leading-relaxed">
+              Sube tu archivo de Excel (<strong>.xlsx, .xls o .csv</strong>). El sistema extraerá automáticamente la cédula y los nombres sin necesidad de copiar ni pegar texto a mano.
             </p>
           </div>
 
           <div>
             <label className="block font-bold text-slate-700 mb-1">
-              Asignación de Grupos / Niveles:
+              Asignar al Grupo / Nivel:
             </label>
             <select
               value={batchCourseId}
               onChange={(e) => setBatchCourseId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500 bg-white"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
             >
-              <option value="auto">✨ Auto-asignar grupo según la columna 'Nivel' del Excel / CSV (Recomendado)</option>
-              <option disabled>──────── O FORZAR UN SOLO GRUPO PARA TODOS: ────────</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.code || 'ING'})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-bold text-slate-700">
-                Pega aquí el contenido copiado de Excel:
-              </label>
-              <label className="cursor-pointer text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 transition">
-                📂 Cargar archivo .CSV
-                <input
-                  type="file"
-                  accept=".csv,.txt"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      const content = event.target?.result as string;
-                      if (content) setBatchText(content);
-                    };
-                    reader.readAsText(file);
-                  }}
-                />
-              </label>
-            </div>
-            <textarea
-              rows={6}
-              placeholder="Ejemplo:&#10;501230456	Pedro Ramírez Soto&#10;118230442	Valeria Castro Morales&#10;155823491024	Esteban Solís Vargas"
-              value={batchText}
-              onChange={(e) => setBatchText(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs font-mono text-slate-900 focus:outline-none focus:border-blue-500"
-              required
-            />
-          </div>
-        </form>
-      </Modal>
-
-      {/* Modal 3: Cambiar Grado / Nivel Asignado */}
-      <Modal
-        open={openEditModal}
-        title="✏️ Cambiar Grado / Nivel del Estudiante"
-        onClose={() => setOpenEditModal(false)}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setOpenEditModal(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" form="edit-student-grade-form" disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Guardar Nuevo Grado'}
-            </Button>
-          </>
-        }
-      >
-        <form id="edit-student-grade-form" onSubmit={onEditSubmit} className="space-y-4 text-xs">
-          <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200 text-slate-800 space-y-1.5">
-            <p className="font-bold text-sm text-slate-900">{editingStudent?.fullName}</p>
-            <p className="text-slate-600 font-mono text-xs">Cédula: <strong>{editingStudent?.studentNumber}</strong></p>
-            <p className="text-blue-700 text-xs font-semibold">Nivel actual: <strong>{editingStudent?.gradeLevel || 'Sin asignar'}</strong></p>
-          </div>
-
-          <div>
-            <label className="block font-bold text-slate-700 mb-1">
-              Seleccionar Nuevo Grado / Nivel de Inglés CINDEA: <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={selectedNewCourseId}
-              onChange={(e) => setSelectedNewCourseId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500"
-            >
+              <option value="auto">⚡ Detectar automáticamente por texto de grado</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
               ))}
             </select>
-            <span className="text-[11px] text-slate-500 mt-1.5 block leading-relaxed">
-              💡 Al guardar este cambio, el estudiante únicamente podrá ver las tareas, materiales, notas y comunicados de este grado específico.
-            </span>
           </div>
+
+          {/* Dropzone para cargar archivo Excel con Drag & Drop real */}
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              Archivo Excel (.xlsx, .xls, .csv):
+            </label>
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                const f = e.dataTransfer.files?.[0];
+                if (f) handleFileUpload(f);
+              }}
+              className={cn(
+                'border-2 border-dashed rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer transition group',
+                isDragging
+                  ? 'border-emerald-500 bg-emerald-50 scale-[1.02] shadow-md ring-4 ring-emerald-100'
+                  : 'border-slate-200 hover:border-emerald-500 bg-slate-50/50 hover:bg-emerald-50/20'
+              )}
+            >
+              <UploadCloud
+                className={cn(
+                  'w-9 h-9 transition mb-2',
+                  isDragging ? 'text-emerald-600 animate-bounce' : 'text-slate-400 group-hover:text-emerald-600'
+                )}
+              />
+              <span
+                className={cn(
+                  'text-xs font-bold transition',
+                  isDragging ? 'text-emerald-900 font-extrabold' : 'text-slate-800 group-hover:text-emerald-900'
+                )}
+              >
+                {excelFile
+                  ? `Archivo seleccionado: ${excelFile.name}`
+                  : isDragging
+                  ? '¡Suelta tu archivo Excel aquí!'
+                  : 'Arrastra y suelta tu archivo Excel aquí o haz clic para buscar'}
+              </span>
+              <span className="text-[11px] text-slate-400 mt-1">
+                {excelFile
+                  ? `${(excelFile.size / 1024).toFixed(1)} KB`
+                  : 'Soporta archivos de nómina oficial (.xlsx, .xls, .csv)'}
+              </span>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFileUpload(f);
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {parsingError && (
+            <div className="p-3 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{parsingError}</span>
+            </div>
+          )}
+
+          {parsedStudents.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-700">
+                  Vista previa ({parsedStudents.length} estudiantes detectados):
+                </span>
+                <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  ✓ Listo para importar
+                </span>
+              </div>
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100 bg-white shadow-2xs">
+                {parsedStudents.slice(0, 15).map((st, i) => (
+                  <div key={i} className="px-3.5 py-1.5 flex items-center justify-between text-xs hover:bg-slate-50">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-slate-400 text-[10px] w-5">{i + 1}.</span>
+                      <span className="font-bold text-slate-800">{st.fullName}</span>
+                    </div>
+                    <span className="font-mono text-slate-500 text-[11px] font-semibold">{st.studentNumber}</span>
+                  </div>
+                ))}
+                {parsedStudents.length > 15 && (
+                  <div className="px-3.5 py-2 text-center text-[11px] text-slate-400 bg-slate-50 font-medium">
+                    ... y {parsedStudents.length - 15} estudiantes más en el archivo
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </form>
+      </Modal>
+
+      {/* Modal 3: Cambiar Grado / Nivel de un estudiante */}
+      <Modal
+        open={openEditModal}
+        title="Cambiar Grado / Módulo del Estudiante"
+        onClose={() => {
+          setOpenEditModal(false);
+          setEditingStudent(null);
+        }}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setOpenEditModal(false);
+                setEditingStudent(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" form="edit-student-form" disabled={submitting}>
+              {submitting ? 'Guardando...' : 'Guardar Cambio'}
+            </Button>
+          </>
+        }
+      >
+        {editingStudent && (
+          <form id="edit-student-form" onSubmit={onEditSubmit} className="space-y-4 text-xs">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-1">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Estudiante Seleccionado:</span>
+              <p className="text-sm font-bold text-slate-900">{editingStudent.fullName}</p>
+              <p className="text-xs font-mono text-slate-600">Cédula: {editingStudent.studentNumber}</p>
+            </div>
+
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">
+                Selecciona el Nuevo Grado / Nivel de Inglés:
+              </label>
+              <select
+                value={selectedNewCourseId}
+                onChange={(e) => setSelectedNewCourseId(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-900 focus:outline-none focus:border-blue-500"
+                required
+              >
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );
