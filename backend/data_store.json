@@ -1608,9 +1608,25 @@
       "id": "2c3bc6e0-a645-4347-8ea2-cd904a13873c",
       "user_id": "88888888-8888-4888-a888-888888888888",
       "token_hash": "66a4f36b1e71c7bf81fa67938622e005ffe309bd999ab2b812415a0ea7217408",
-      "revoked": false,
+      "revoked": true,
       "expires_at": "2026-08-26T16:36:26.736Z",
       "created_at": "2026-08-19T16:36:26.736Z"
+    },
+    {
+      "id": "30662078-9732-4ad0-93fc-a637d808276f",
+      "user_id": "88888888-8888-4888-a888-888888888888",
+      "token_hash": "4c74c179da0f6a77c142a077a2e880996471144349c317c895ac9d9805e6f3bf",
+      "revoked": false,
+      "expires_at": "2026-08-26T16:59:58.640Z",
+      "created_at": "2026-08-19T16:59:58.640Z"
+    },
+    {
+      "id": "693ca165-d215-436b-b0a9-03a32dca7d45",
+      "user_id": "88888888-8888-4888-a888-888888888888",
+      "token_hash": "badf9b1330811d0eb091325240b4a065a7285e080b89fd1086490601bc67467c",
+      "revoked": false,
+      "expires_at": "2026-08-26T17:02:26.724Z",
+      "created_at": "2026-08-19T17:02:26.725Z"
     }
   ],
   "justifications": [],

@@ -1006,7 +1006,7 @@ export function StudentPortal() {
           )}
 
           {/* CONTENIDO PRINCIPAL */}
-          <main className="p-6 md:p-8 space-y-6 max-w-7xl">
+          <main className="p-3.5 sm:p-6 md:p-8 pb-24 md:pb-8 space-y-6 max-w-7xl">
             {/* 1. SECCIÓN: DASHBOARD GENERAL */}
             {activeTab === 'dashboard' && (
               <div className="space-y-6">
@@ -2381,6 +2381,71 @@ export function StudentPortal() {
           </form>
         )}
       </Modal>
+
+          {/* Barra Inferior Fija para Móviles (Bottom Navigation Bar) */}
+          <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard')}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer',
+                activeTab === 'dashboard' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              )}
+            >
+              <Home className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Inicio</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('assignments')}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition relative cursor-pointer',
+                activeTab === 'assignments' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              )}
+            >
+              <FolderCheck className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Tareas</span>
+              {assignments.length > 0 && (
+                <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-blue-600" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('grades')}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer',
+                activeTab === 'grades' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              )}
+            >
+              <GraduationCap className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Notas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('justifications')}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition relative cursor-pointer',
+                activeTab === 'justifications' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              )}
+            >
+              <Paperclip className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px]">Boletas</span>
+              {myJustifications.length > 0 && (
+                <span className="absolute top-0.5 right-2 w-2 h-2 rounded-full bg-amber-500" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('tutor')}
+              className={cn(
+                'flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition cursor-pointer',
+                activeTab === 'tutor' ? 'text-amber-500 font-bold' : 'text-slate-500 hover:text-slate-800 font-medium'
+              )}
+            >
+              <Sparkles className="w-5 h-5 mb-0.5 text-amber-500" />
+              <span className="text-[10px]">Tutor IA</span>
+            </button>
+          </nav>
         </div>
       </div>
     </div>

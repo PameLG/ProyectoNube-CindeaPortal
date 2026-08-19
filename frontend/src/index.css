@@ -114,59 +114,117 @@ html.dark-theme body {
   color: #f1f5f9 !important;
 }
 
-html.dark-theme .bg-white {
+/* Backgrounds & Containers */
+html.dark-theme .bg-white,
+html.dark-theme [class*="bg-white"] {
   background-color: #151e2e !important;
   color: #f8fafc !important;
 }
 
 html.dark-theme .bg-slate-50,
-html.dark-theme .bg-slate-100 {
+html.dark-theme .bg-slate-100,
+html.dark-theme [class*="bg-slate-50"],
+html.dark-theme [class*="bg-slate-100"] {
   background-color: #0f172a !important;
 }
 
-html.dark-theme .border-slate-200,
-html.dark-theme .border-slate-100,
-html.dark-theme .border-slate-200\/80,
-html.dark-theme .border-slate-200\/90 {
+html.dark-theme .bg-slate-200,
+html.dark-theme [class*="bg-slate-200"] {
+  background-color: #1e293b !important;
+}
+
+/* Chat AI Bubbles & Messages specifically */
+html.dark-theme .bg-slate-50\/90,
+html.dark-theme .bg-slate-50\/80,
+html.dark-theme .bg-slate-50\/70,
+html.dark-theme .bg-slate-50\/50,
+html.dark-theme .bg-slate-100\/90,
+html.dark-theme .bg-slate-100\/80 {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.dark-theme .bg-indigo-100 {
+  background-color: #312e81 !important;
+  color: #c7d2fe !important;
+  border-color: #4338ca !important;
+}
+
+/* Borders */
+html.dark-theme [class*="border-slate"] {
   border-color: #27354a !important;
 }
 
+/* Text Colors */
 html.dark-theme .text-slate-900,
-html.dark-theme .text-slate-800 {
+html.dark-theme .text-slate-800,
+html.dark-theme [class*="text-slate-900"],
+html.dark-theme [class*="text-slate-800"] {
   color: #f8fafc !important;
 }
 
 html.dark-theme .text-slate-700,
-html.dark-theme .text-slate-600 {
+html.dark-theme .text-slate-600,
+html.dark-theme [class*="text-slate-700"],
+html.dark-theme [class*="text-slate-600"] {
   color: #cbd5e1 !important;
 }
 
 html.dark-theme .text-slate-500,
-html.dark-theme .text-slate-400 {
+html.dark-theme .text-slate-400,
+html.dark-theme [class*="text-slate-500"],
+html.dark-theme [class*="text-slate-400"] {
   color: #94a3b8 !important;
 }
 
+/* Accents with soft alpha */
 html.dark-theme .bg-blue-50,
-html.dark-theme .bg-blue-50\/80,
-html.dark-theme .bg-blue-50\/70 {
-  background-color: #1e3a8a33 !important;
+html.dark-theme [class*="bg-blue-50"] {
+  background-color: rgba(30, 58, 138, 0.35) !important;
+  color: #93c5fd !important;
 }
 
 html.dark-theme .bg-emerald-50,
-html.dark-theme .bg-emerald-50\/80,
-html.dark-theme .bg-emerald-50\/70 {
-  background-color: #064e3b33 !important;
+html.dark-theme [class*="bg-emerald-50"] {
+  background-color: rgba(6, 78, 59, 0.35) !important;
+  color: #6ee7b7 !important;
 }
 
 html.dark-theme .bg-amber-50,
-html.dark-theme .bg-amber-50\/80,
-html.dark-theme .bg-amber-50\/90 {
-  background-color: #78350f33 !important;
+html.dark-theme [class*="bg-amber-50"] {
+  background-color: rgba(120, 53, 15, 0.35) !important;
+  color: #fde68a !important;
 }
 
+html.dark-theme .bg-rose-50,
+html.dark-theme [class*="bg-rose-50"] {
+  background-color: rgba(136, 19, 55, 0.35) !important;
+  color: #fda4af !important;
+}
+
+/* Form Inputs */
 html.dark-theme input,
 html.dark-theme textarea,
 html.dark-theme select {
+  background-color: #151e2e !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+/* Tables & Hover States */
+html.dark-theme tr:hover {
+  background-color: rgba(30, 41, 59, 0.5) !important;
+}
+
+html.dark-theme .divide-slate-100 > *,
+html.dark-theme .divide-slate-200 > * {
+  border-color: #27354a !important;
+}
+
+/* Modals */
+html.dark-theme [role="dialog"],
+html.dark-theme .modal-container {
   background-color: #151e2e !important;
   color: #f8fafc !important;
   border-color: #334155 !important;
@@ -183,8 +241,11 @@ html.high-contrast body {
 
 html.high-contrast .bg-white,
 html.high-contrast .bg-slate-50,
-html.high-contrast .bg-slate-100 {
-  background-color: #121212 !important;
+html.high-contrast .bg-slate-100,
+html.high-contrast .bg-slate-200,
+html.high-contrast [class*="bg-white"],
+html.high-contrast [class*="bg-slate-"] {
+  background-color: #000000 !important;
   color: #ffffff !important;
   border-color: #ffffff !important;
 }
@@ -194,6 +255,29 @@ html.high-contrast .text-slate-800,
 html.high-contrast .text-slate-700,
 html.high-contrast .text-slate-600,
 html.high-contrast .text-slate-500,
-html.high-contrast .text-slate-400 {
+html.high-contrast .text-slate-400,
+html.high-contrast [class*="text-slate-"] {
   color: #ffffff !important;
+}
+
+html.high-contrast [class*="border-"] {
+  border-color: #ffffff !important;
+}
+
+html.high-contrast input,
+html.high-contrast textarea,
+html.high-contrast select {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
+}
+
+html.high-contrast button {
+  border: 1px solid #ffffff !important;
+}
+
+html.high-contrast [role="dialog"] {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #ffffff !important;
 }
